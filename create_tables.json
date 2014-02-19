@@ -1,0 +1,6494 @@
+[
+  {
+    "directive": "\\set ON_ERROR_STOP 1\n"
+  },
+  {
+    "other_sql": "BEGIN;\n\n"
+  },
+  {
+    "create_table": {
+      "table_name": "annotation",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references editor.id\n    "
+        },
+        {
+          "column_name": "text",
+          "data_type": "TEXT"
+        },
+        {
+          "column_name": "changelog",
+          "data_type": "VARCHAR(255)"
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "application",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "owner",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references editor.id\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "oauth_id",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "oauth_secret",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "oauth_redirect_uri",
+          "data_type": "TEXT"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "area_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "area",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "gid",
+          "data_type": "uuid",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "sort_name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "type",
+          "data_type": "INTEGER",
+          "comment": "-- references area_type.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >=0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "begin_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "ended",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT FALSE\n      CHECK (\n        (\n          -- If any end date fields are not null, then ended must be true\n          (end_date_year IS NOT NULL OR\n           end_date_month IS NOT NULL OR\n           end_date_day IS NOT NULL) AND\n          ended = TRUE\n        ) OR (\n          -- Otherwise, all end date fields must be null\n          (end_date_year IS NULL AND\n           end_date_month IS NULL AND\n           end_date_day IS NULL)\n        )\n      )"
+        },
+        {
+          "column_name": "comment",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL DEFAULT ''\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "area_gid_redirect",
+      "columns": [
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "new_id",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "area_alias_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL",
+          "comment": "-- PK,\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "area_alias",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL",
+          "comment": "--PK\n    "
+        },
+        {
+          "column_name": "area",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "locale",
+          "data_type": "TEXT"
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >=0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "type",
+          "data_type": "INTEGER",
+          "comment": "-- references area_alias_type.id\n    "
+        },
+        {
+          "column_name": "sort_name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "begin_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "primary_for_locale",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT false"
+        },
+        {
+          "column_name": "ended",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT FALSE\n      CHECK (\n        (\n          -- If any end date fields are not null, then ended must be true\n          (end_date_year IS NOT NULL OR\n           end_date_month IS NOT NULL OR\n           end_date_day IS NOT NULL) AND\n          ended = TRUE\n        ) OR (\n          -- Otherwise, all end date fields must be null\n          (end_date_year IS NULL AND\n           end_date_month IS NULL AND\n           end_date_day IS NULL)\n        )\n      )"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "area_annotation",
+      "columns": [
+        {
+          "column_name": "area",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references area.id\n    "
+        },
+        {
+          "column_name": "annotation",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references annotation.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "artist",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "sort_name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "begin_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "type",
+          "data_type": "INTEGER",
+          "comment": "-- references artist_type.id\n    "
+        },
+        {
+          "column_name": "area",
+          "data_type": "INTEGER",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "gender",
+          "data_type": "INTEGER",
+          "comment": "-- references gender.id\n    "
+        },
+        {
+          "column_name": "comment",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL DEFAULT ''"
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "ended",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT FALSE\n      CONSTRAINT artist_ended_check CHECK (\n        (\n          -- If any end date fields are not null, then ended must be true\n          (end_date_year IS NOT NULL OR\n           end_date_month IS NOT NULL OR\n           end_date_day IS NOT NULL) AND\n          ended = TRUE\n        ) OR (\n          -- Otherwise, all end date fields must be null\n          (end_date_year IS NULL AND\n           end_date_month IS NULL AND\n           end_date_day IS NULL)\n        )\n      )"
+        },
+        {
+          "column_name": "begin_area",
+          "data_type": "INTEGER",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "end_area",
+          "data_type": "INTEGER",
+          "comment": "-- references area.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "artist_deletion",
+      "columns": [
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "last_known_name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "last_known_comment",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "deleted_at",
+          "data_type": "timestamptz",
+          "column_constraint": "NOT NULL DEFAULT now()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "artist_alias_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "artist_alias",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "artist",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist.id\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "locale",
+          "data_type": "TEXT"
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "type",
+          "data_type": "INTEGER",
+          "comment": "-- references artist_alias_type.id\n    "
+        },
+        {
+          "column_name": "sort_name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "begin_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "primary_for_locale",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT false"
+        },
+        {
+          "column_name": "ended",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT FALSE\n      CHECK (\n        (\n          -- If any end date fields are not null, then ended must be true\n          (end_date_year IS NOT NULL OR\n           end_date_month IS NOT NULL OR\n           end_date_day IS NOT NULL) AND\n          ended = TRUE\n        ) OR (\n          -- Otherwise, all end date fields must be null\n          (end_date_year IS NULL AND\n           end_date_month IS NULL AND\n           end_date_day IS NULL)\n        )\n      )"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "artist_annotation",
+      "columns": [
+        {
+          "column_name": "artist",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references artist.id\n    "
+        },
+        {
+          "column_name": "annotation",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references annotation.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "artist_ipi",
+      "columns": [
+        {
+          "column_name": "artist",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references artist.id\n    "
+        },
+        {
+          "column_name": "ipi",
+          "data_type": "CHAR(11)",
+          "column_constraint": "NOT NULL CHECK (ipi ~ E'^\\\\d{11}$')",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "artist_isni",
+      "columns": [
+        {
+          "column_name": "artist",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references artist.id\n    "
+        },
+        {
+          "column_name": "isni",
+          "data_type": "CHAR(16)",
+          "column_constraint": "NOT NULL CHECK (isni ~ E'^\\\\d{15}[\\\\dX]$')",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "artist_meta",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references artist.id CASCADE\n    "
+        },
+        {
+          "column_name": "rating",
+          "data_type": "SMALLINT",
+          "column_constraint": "CHECK (rating >= 0 AND rating <= 100)"
+        },
+        {
+          "column_name": "rating_count",
+          "data_type": "INTEGER"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "artist_tag",
+      "columns": [
+        {
+          "column_name": "artist",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references artist.id\n    "
+        },
+        {
+          "column_name": "tag",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references tag.id\n    "
+        },
+        {
+          "column_name": "count",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "artist_rating_raw",
+      "columns": [
+        {
+          "column_name": "artist",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references artist.id\n    "
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor.id\n    "
+        },
+        {
+          "column_name": "rating",
+          "data_type": "SMALLINT",
+          "column_constraint": "NOT NULL CHECK (rating >= 0 AND rating <= 100)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "artist_tag_raw",
+      "columns": [
+        {
+          "column_name": "artist",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references artist.id\n    "
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor.id\n    "
+        },
+        {
+          "column_name": "tag",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references tag.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "artist_credit",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "artist_count",
+          "data_type": "SMALLINT",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "ref_count",
+          "data_type": "INTEGER",
+          "column_constraint": "DEFAULT 0"
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "artist_credit_name",
+      "columns": [
+        {
+          "column_name": "artist_credit",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references artist_credit.id CASCADE\n    "
+        },
+        {
+          "column_name": "position",
+          "data_type": "SMALLINT",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "artist",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist.id CASCADE\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "join_phrase",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL DEFAULT ''\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "artist_gid_redirect",
+      "columns": [
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "new_id",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist.id\n    "
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "artist_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "autoeditor_election",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "candidate",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references editor.id\n    "
+        },
+        {
+          "column_name": "proposer",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references editor.id\n    "
+        },
+        {
+          "column_name": "seconder_1",
+          "data_type": "INTEGER",
+          "comment": "-- references editor.id\n    "
+        },
+        {
+          "column_name": "seconder_2",
+          "data_type": "INTEGER",
+          "comment": "-- references editor.id\n    "
+        },
+        {
+          "column_name": "status",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 1\n                            CHECK (status IN (1,2,3,4,5,6))",
+          "comment": "-- 1 : has proposer\n                            -- 2 : has seconder_1\n                            -- 3 : has seconder_2 (voting open)\n                            -- 4 : accepted!\n                            -- 5 : rejected\n                            -- 6 : cancelled (by proposer)\n    "
+        },
+        {
+          "column_name": "yes_votes",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "no_votes",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "propose_time",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE NOT NULL DEFAULT NOW()"
+        },
+        {
+          "column_name": "open_time",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE"
+        },
+        {
+          "column_name": "close_time",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "autoeditor_election_vote",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "autoeditor_election",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references autoeditor_election.id\n    "
+        },
+        {
+          "column_name": "voter",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references editor.id\n    "
+        },
+        {
+          "column_name": "vote",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL CHECK (vote IN (-1,0,1))"
+        },
+        {
+          "column_name": "vote_time",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE NOT NULL DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "cdtoc",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "discid",
+          "data_type": "CHAR(28)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "freedb_id",
+          "data_type": "CHAR(8)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "track_count",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "leadout_offset",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "track_offset",
+          "data_type": "INTEGER[]",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "degraded",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT FALSE"
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "cdtoc_raw",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "release",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release_raw.id\n    "
+        },
+        {
+          "column_name": "discid",
+          "data_type": "CHAR(28)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "track_count",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "leadout_offset",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "track_offset",
+          "data_type": "INTEGER[]",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "country_area",
+      "columns": [
+        {
+          "column_name": "area",
+          "data_type": "INTEGER",
+          "comment": "-- PK, references area.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "edit",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references editor.id\n    "
+        },
+        {
+          "column_name": "type",
+          "data_type": "SMALLINT",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "status",
+          "data_type": "SMALLINT",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "data",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "yes_votes",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "no_votes",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "autoedit",
+          "data_type": "SMALLINT",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "open_time",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "close_time",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE"
+        },
+        {
+          "column_name": "expire_time",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE NOT NULL"
+        },
+        {
+          "column_name": "language",
+          "data_type": "INTEGER",
+          "comment": "-- references language\n    "
+        },
+        {
+          "column_name": "quality",
+          "data_type": "SMALLINT",
+          "column_constraint": "NOT NULL DEFAULT 1\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "edit_note",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references editor.id\n    "
+        },
+        {
+          "column_name": "edit",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references edit.id\n    "
+        },
+        {
+          "column_name": "text",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "post_time",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "edit_area",
+      "columns": [
+        {
+          "column_name": "edit",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references edit.id\n    "
+        },
+        {
+          "column_name": "area",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL  ",
+          "comment": "-- PK, references area.id CASCADE\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "edit_artist",
+      "columns": [
+        {
+          "column_name": "edit",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references edit.id\n    "
+        },
+        {
+          "column_name": "artist",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references artist.id CASCADE\n    "
+        },
+        {
+          "column_name": "status",
+          "data_type": "SMALLINT",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- materialized from edit.status\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "edit_label",
+      "columns": [
+        {
+          "column_name": "edit",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references edit.id\n    "
+        },
+        {
+          "column_name": "label",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references label.id CASCADE\n    "
+        },
+        {
+          "column_name": "status",
+          "data_type": "SMALLINT",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- materialized from edit.status\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "edit_place",
+      "columns": [
+        {
+          "column_name": "edit",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references edit.id\n    "
+        },
+        {
+          "column_name": "place",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL  ",
+          "comment": "-- PK, references place.id CASCADE\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "edit_release",
+      "columns": [
+        {
+          "column_name": "edit",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references edit.id\n    "
+        },
+        {
+          "column_name": "release",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL  ",
+          "comment": "-- PK, references release.id CASCADE\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "edit_release_group",
+      "columns": [
+        {
+          "column_name": "edit",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references edit.id\n    "
+        },
+        {
+          "column_name": "release_group",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL  ",
+          "comment": "-- PK, references release_group.id CASCADE\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "edit_recording",
+      "columns": [
+        {
+          "column_name": "edit",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references edit.id\n    "
+        },
+        {
+          "column_name": "recording",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL  ",
+          "comment": "-- PK, references recording.id CASCADE\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "edit_work",
+      "columns": [
+        {
+          "column_name": "edit",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references edit.id\n    "
+        },
+        {
+          "column_name": "work",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL  ",
+          "comment": "-- PK, references work.id CASCADE\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "edit_url",
+      "columns": [
+        {
+          "column_name": "edit",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references edit.id\n    "
+        },
+        {
+          "column_name": "url",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL  ",
+          "comment": "-- PK, references url.id CASCADE\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "editor",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(64)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "privs",
+          "data_type": "INTEGER",
+          "column_constraint": "DEFAULT 0"
+        },
+        {
+          "column_name": "email",
+          "data_type": "VARCHAR(64)",
+          "column_constraint": "DEFAULT NULL"
+        },
+        {
+          "column_name": "website",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "DEFAULT NULL"
+        },
+        {
+          "column_name": "bio",
+          "data_type": "TEXT",
+          "column_constraint": "DEFAULT NULL"
+        },
+        {
+          "column_name": "member_since",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "email_confirm_date",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE"
+        },
+        {
+          "column_name": "last_login_date",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT now()"
+        },
+        {
+          "column_name": "edits_accepted",
+          "data_type": "INTEGER",
+          "column_constraint": "DEFAULT 0"
+        },
+        {
+          "column_name": "edits_rejected",
+          "data_type": "INTEGER",
+          "column_constraint": "DEFAULT 0"
+        },
+        {
+          "column_name": "auto_edits_accepted",
+          "data_type": "INTEGER",
+          "column_constraint": "DEFAULT 0"
+        },
+        {
+          "column_name": "edits_failed",
+          "data_type": "INTEGER",
+          "column_constraint": "DEFAULT 0"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "birth_date",
+          "data_type": "DATE"
+        },
+        {
+          "column_name": "gender",
+          "data_type": "INTEGER",
+          "comment": "-- references gender.id\n    "
+        },
+        {
+          "column_name": "area",
+          "data_type": "INTEGER",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "password",
+          "data_type": "VARCHAR(128)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "ha1",
+          "data_type": "CHAR(32)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "deleted",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT FALSE\n"
+        }
+      ]
+    }
+  },
+  {
+    "other_sql": "CREATE TYPE FLUENCY AS ENUM ('basic', 'intermediate', 'advanced', 'native');\n\n"
+  },
+  {
+    "create_table": {
+      "table_name": "editor_language",
+      "columns": [
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor.id\n    "
+        },
+        {
+          "column_name": "language",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references language.id\n    "
+        },
+        {
+          "column_name": "fluency",
+          "data_type": "FLUENCY",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "editor_preference",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references editor.id\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(50)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "value",
+          "data_type": "VARCHAR(100)",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "editor_subscribe_artist",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references editor.id\n    "
+        },
+        {
+          "column_name": "artist",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist.id\n    "
+        },
+        {
+          "column_name": "last_edit_sent",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- references edit.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "editor_subscribe_artist_deleted",
+      "columns": [
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor.id\n    "
+        },
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references artist_deletion.gid\n    "
+        },
+        {
+          "column_name": "deleted_by",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- references edit.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "editor_subscribe_collection",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references editor.id\n    "
+        },
+        {
+          "column_name": "collection",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- weakly references collection\n    "
+        },
+        {
+          "column_name": "last_edit_sent",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- weakly references edit\n    "
+        },
+        {
+          "column_name": "available",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT TRUE"
+        },
+        {
+          "column_name": "last_seen_name",
+          "data_type": "VARCHAR(255)"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "editor_subscribe_label",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references editor.id\n    "
+        },
+        {
+          "column_name": "label",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references label.id\n    "
+        },
+        {
+          "column_name": "last_edit_sent",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- references edit.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "editor_subscribe_label_deleted",
+      "columns": [
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor.id\n    "
+        },
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references label_deletion.gid\n    "
+        },
+        {
+          "column_name": "deleted_by",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- references edit.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "editor_subscribe_editor",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references editor.id (the one who has subscribed)\n    "
+        },
+        {
+          "column_name": "subscribed_editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references editor.id (the one being subscribed)\n    "
+        },
+        {
+          "column_name": "last_edit_sent",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL  ",
+          "comment": "-- weakly references edit\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "gender",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "iso_3166_1",
+      "columns": [
+        {
+          "column_name": "area",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "code",
+          "data_type": "CHAR(2)",
+          "comment": "-- PK\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "iso_3166_2",
+      "columns": [
+        {
+          "column_name": "area",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "code",
+          "data_type": "VARCHAR(10)",
+          "comment": "-- PK\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "iso_3166_3",
+      "columns": [
+        {
+          "column_name": "area",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "code",
+          "data_type": "CHAR(4)",
+          "comment": "-- PK\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "isrc",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "recording",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references recording.id\n    "
+        },
+        {
+          "column_name": "isrc",
+          "data_type": "CHAR(12)",
+          "column_constraint": "NOT NULL CHECK (isrc ~ E'^[A-Z]{2}[A-Z0-9]{3}[0-9]{7}$')"
+        },
+        {
+          "column_name": "source",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "iswc",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "work",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references work.id\n    "
+        },
+        {
+          "column_name": "iswc",
+          "data_type": "CHARACTER(15)",
+          "column_constraint": "CHECK (iswc ~ E'^T-?\\\\d{3}.?\\\\d{3}.?\\\\d{3}[-.]?\\\\d$')"
+        },
+        {
+          "column_name": "source",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE NOT NULL DEFAULT now()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_area_area",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_area_artist",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_area_label",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references label.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_area_place",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references place.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_area_recording",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references recording.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_area_release",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_area_release_group",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release_group.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_area_url",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references url.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_area_work",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references work.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_artist_artist",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_artist_label",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references label.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_artist_place",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references place.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_artist_recording",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references recording.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_artist_release",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_artist_release_group",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release_group.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_artist_url",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references url.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_artist_work",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references work.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_label_label",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references label.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references label.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_label_place",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references label.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references place.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_label_recording",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references label.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references recording.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_label_release",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references label.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_label_release_group",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references label.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release_group.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_label_url",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references label.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references url.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_label_work",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references label.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references work.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_place_place",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references place.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references place.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_place_recording",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references place.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references recording.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_place_release",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references place.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_place_release_group",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references place.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release_group.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_place_url",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references place.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references url.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_place_work",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references place.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references work.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_recording_recording",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references recording.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references recording.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_recording_release",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references recording.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_recording_release_group",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references recording.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release_group.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_recording_url",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references recording.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references url.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_recording_work",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references recording.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references work.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_release_release",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_release_release_group",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release_group.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_release_url",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references url.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_release_work",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references work.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_release_group_release_group",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release_group.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release_group.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_release_group_url",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release_group.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references url.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_release_group_work",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release_group.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references work.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_url_url",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references url.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references url.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_url_work",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references url.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references work.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_work_work",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references work.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references work.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "label",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "sort_name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "begin_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "label_code",
+          "data_type": "INTEGER",
+          "column_constraint": "CHECK (label_code > 0 AND label_code < 100000)"
+        },
+        {
+          "column_name": "type",
+          "data_type": "INTEGER",
+          "comment": "-- references label_type.id\n    "
+        },
+        {
+          "column_name": "area",
+          "data_type": "INTEGER",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "comment",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL DEFAULT ''"
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "ended",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT FALSE\n      CONSTRAINT label_ended_check CHECK (\n        (\n          -- If any end date fields are not null, then ended must be true\n          (end_date_year IS NOT NULL OR\n           end_date_month IS NOT NULL OR\n           end_date_day IS NOT NULL) AND\n          ended = TRUE\n        ) OR (\n          -- Otherwise, all end date fields must be null\n          (end_date_year IS NULL AND\n           end_date_month IS NULL AND\n           end_date_day IS NULL)\n        )\n      )\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "label_deletion",
+      "columns": [
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "last_known_name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "last_known_comment",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "deleted_at",
+          "data_type": "timestamptz",
+          "column_constraint": "NOT NULL DEFAULT now()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "label_rating_raw",
+      "columns": [
+        {
+          "column_name": "label",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references label.id\n    "
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor.id\n    "
+        },
+        {
+          "column_name": "rating",
+          "data_type": "SMALLINT",
+          "column_constraint": "NOT NULL CHECK (rating >= 0 AND rating <= 100)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "label_tag_raw",
+      "columns": [
+        {
+          "column_name": "label",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references label.id\n    "
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor.id\n    "
+        },
+        {
+          "column_name": "tag",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references tag.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "label_alias_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "label_alias",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "label",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references label.id\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "locale",
+          "data_type": "TEXT"
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "type",
+          "data_type": "INTEGER",
+          "comment": "-- references label_alias_type.id\n    "
+        },
+        {
+          "column_name": "sort_name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "begin_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "primary_for_locale",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT false"
+        },
+        {
+          "column_name": "ended",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT FALSE\n      CHECK (\n        (\n          -- If any end date fields are not null, then ended must be true\n          (end_date_year IS NOT NULL OR\n           end_date_month IS NOT NULL OR\n           end_date_day IS NOT NULL) AND\n          ended = TRUE\n        ) OR (\n          -- Otherwise, all end date fields must be null\n          (end_date_year IS NULL AND\n           end_date_month IS NULL AND\n           end_date_day IS NULL)\n        )\n      )"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "label_annotation",
+      "columns": [
+        {
+          "column_name": "label",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references label.id\n    "
+        },
+        {
+          "column_name": "annotation",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references annotation.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "label_ipi",
+      "columns": [
+        {
+          "column_name": "label",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references label.id\n    "
+        },
+        {
+          "column_name": "ipi",
+          "data_type": "CHAR(11)",
+          "column_constraint": "NOT NULL CHECK (ipi ~ E'^\\\\d{11}$')",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "label_isni",
+      "columns": [
+        {
+          "column_name": "label",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references label.id\n    "
+        },
+        {
+          "column_name": "isni",
+          "data_type": "CHAR(16)",
+          "column_constraint": "NOT NULL CHECK (isni ~ E'^\\\\d{15}[\\\\dX]$')",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "label_meta",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references label.id CASCADE\n    "
+        },
+        {
+          "column_name": "rating",
+          "data_type": "SMALLINT",
+          "column_constraint": "CHECK (rating >= 0 AND rating <= 100)"
+        },
+        {
+          "column_name": "rating_count",
+          "data_type": "INTEGER"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "label_gid_redirect",
+      "columns": [
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "new_id",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references label.id\n    "
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "label_tag",
+      "columns": [
+        {
+          "column_name": "label",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references label.id\n    "
+        },
+        {
+          "column_name": "tag",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references tag.id\n    "
+        },
+        {
+          "column_name": "count",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "label_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "language",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "iso_code_2t",
+          "data_type": "CHAR(3)",
+          "comment": "-- ISO 639-2 (T)\n    "
+        },
+        {
+          "column_name": "iso_code_2b",
+          "data_type": "CHAR(3)",
+          "comment": "-- ISO 639-2 (B)\n    "
+        },
+        {
+          "column_name": "iso_code_1",
+          "data_type": "CHAR(2)",
+          "comment": "-- ISO 639\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(100)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "frequency",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "iso_code_3",
+          "data_type": "CHAR(3)",
+          "comment": "-- ISO 639-3\n"
+        }
+      ]
+    }
+  },
+  {
+    "other_sql": "ALTER TABLE language\n      ADD CONSTRAINT iso_code_check\n      CHECK (iso_code_2t IS NOT NULL OR iso_code_3  IS NOT NULL);\n\n"
+  },
+  {
+    "create_table": {
+      "table_name": "link",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link_type",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link_type.id\n    "
+        },
+        {
+          "column_name": "begin_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "attribute_count",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "ended",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT FALSE\n      CONSTRAINT link_ended_check CHECK (\n        (\n          -- If any end date fields are not null, then ended must be true\n          (end_date_year IS NOT NULL OR\n           end_date_month IS NOT NULL OR\n           end_date_day IS NOT NULL) AND\n          ended = TRUE\n        ) OR (\n          -- Otherwise, all end date fields must be null\n          (end_date_year IS NULL AND\n           end_date_month IS NULL AND\n           end_date_day IS NULL)\n        )\n      )\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "link_attribute",
+      "columns": [
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references link.id\n    "
+        },
+        {
+          "column_name": "attribute_type",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references link_attribute_type.id\n    "
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "link_attribute_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references link_attribute_type.id\n    "
+        },
+        {
+          "column_name": "root",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link_attribute_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "link_creditable_attribute_type",
+      "columns": [
+        {
+          "column_name": "attribute_type",
+          "data_type": "INT",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references link_attribute_type.id CASCADE\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "link_attribute_credit",
+      "columns": [
+        {
+          "column_name": "link",
+          "data_type": "INT",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references link.id\n  "
+        },
+        {
+          "column_name": "attribute_type",
+          "data_type": "INT",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references link_creditable_attribute_type.attribute_type\n  "
+        },
+        {
+          "column_name": "credited_as",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "link_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references link_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "entity_type0",
+          "data_type": "VARCHAR(50)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "entity_type1",
+          "data_type": "VARCHAR(50)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
+        },
+        {
+          "column_name": "link_phrase",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "reverse_link_phrase",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "long_link_phrase",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "priority",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "is_deprecated",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT false\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "link_type_attribute_type",
+      "columns": [
+        {
+          "column_name": "link_type",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references link_type.id\n    "
+        },
+        {
+          "column_name": "attribute_type",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references link_attribute_type.id\n    "
+        },
+        {
+          "column_name": "min",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "max",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "editor_collection",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references editor.id\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "public",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT FALSE"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT",
+          "column_constraint": "DEFAULT '' NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "editor_collection_release",
+      "columns": [
+        {
+          "column_name": "collection",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor_collection.id\n    "
+        },
+        {
+          "column_name": "release",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references release.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "editor_oauth_token",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references editor.id\n    "
+        },
+        {
+          "column_name": "application",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references application.id\n    "
+        },
+        {
+          "column_name": "authorization_code",
+          "data_type": "TEXT"
+        },
+        {
+          "column_name": "refresh_token",
+          "data_type": "TEXT"
+        },
+        {
+          "column_name": "access_token",
+          "data_type": "TEXT"
+        },
+        {
+          "column_name": "mac_key",
+          "data_type": "TEXT"
+        },
+        {
+          "column_name": "mac_time_diff",
+          "data_type": "INTEGER"
+        },
+        {
+          "column_name": "expire_time",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE NOT NULL"
+        },
+        {
+          "column_name": "scope",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "granted",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE NOT NULL DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "editor_watch_preferences",
+      "columns": [
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor.id CASCADE\n    "
+        },
+        {
+          "column_name": "notify_via_email",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT TRUE"
+        },
+        {
+          "column_name": "notification_timeframe",
+          "data_type": "INTERVAL",
+          "column_constraint": "NOT NULL DEFAULT '1 week'"
+        },
+        {
+          "column_name": "last_checked",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE NOT NULL DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "editor_watch_artist",
+      "columns": [
+        {
+          "column_name": "artist",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references artist.id CASCADE\n    "
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL  ",
+          "comment": "-- PK, references editor.id CASCADE\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "editor_watch_release_group_type",
+      "columns": [
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor.id CASCADE\n    "
+        },
+        {
+          "column_name": "release_group_type",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references release_group_primary_type.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "editor_watch_release_status",
+      "columns": [
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor.id CASCADE\n    "
+        },
+        {
+          "column_name": "release_status",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references release_status.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "medium",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "release",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release.id\n    "
+        },
+        {
+          "column_name": "position",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "format",
+          "data_type": "INTEGER",
+          "comment": "-- references medium_format.id\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(255)"
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "track_count",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "medium_cdtoc",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "medium",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references medium.id\n    "
+        },
+        {
+          "column_name": "cdtoc",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references cdtoc.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "medium_format",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(100)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references medium_format.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "has_discids",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT FALSE\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "place",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "gid",
+          "data_type": "uuid",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "type",
+          "data_type": "INTEGER",
+          "comment": "-- references place_type.id\n    "
+        },
+        {
+          "column_name": "address",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL DEFAULT ''"
+        },
+        {
+          "column_name": "area",
+          "data_type": "INTEGER",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "coordinates",
+          "data_type": "POINT"
+        },
+        {
+          "column_name": "comment",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL DEFAULT ''"
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >=0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "begin_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "ended",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT FALSE\n      CHECK (\n        (\n          -- If any end date fields are not null, then ended must be true\n          (end_date_year IS NOT NULL OR\n           end_date_month IS NOT NULL OR\n           end_date_day IS NOT NULL) AND\n          ended = TRUE\n        ) OR (\n          -- Otherwise, all end date fields must be null\n          (end_date_year IS NULL AND\n           end_date_month IS NULL AND\n           end_date_day IS NULL)\n        )\n      )\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "place_alias",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "place",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references place.id\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "locale",
+          "data_type": "TEXT"
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "type",
+          "data_type": "INTEGER",
+          "comment": "-- references place_alias_type.id\n    "
+        },
+        {
+          "column_name": "sort_name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "begin_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "primary_for_locale",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT false"
+        },
+        {
+          "column_name": "ended",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT FALSE\n      CHECK (\n        (\n          -- If any end date fields are not null, then ended must be true\n          (end_date_year IS NOT NULL OR\n           end_date_month IS NOT NULL OR\n           end_date_day IS NOT NULL) AND\n          ended = TRUE\n        ) OR (\n          -- Otherwise, all end date fields must be null\n          (end_date_year IS NULL AND\n           end_date_month IS NULL AND\n           end_date_day IS NULL)\n        )\n      )"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "place_alias_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "place_annotation",
+      "columns": [
+        {
+          "column_name": "place",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references place.id\n    "
+        },
+        {
+          "column_name": "annotation",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references annotation.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "place_gid_redirect",
+      "columns": [
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "new_id",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references place.id\n    "
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "place_tag",
+      "columns": [
+        {
+          "column_name": "place",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references place.id\n    "
+        },
+        {
+          "column_name": "tag",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references tag.id\n    "
+        },
+        {
+          "column_name": "count",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "place_tag_raw",
+      "columns": [
+        {
+          "column_name": "place",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references place.id\n    "
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor.id\n    "
+        },
+        {
+          "column_name": "tag",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references tag.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "place_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "replication_control",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "current_schema_sequence",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "current_replication_sequence",
+          "data_type": "INTEGER"
+        },
+        {
+          "column_name": "last_replication_date",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "recording",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "artist_credit",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist_credit.id\n    "
+        },
+        {
+          "column_name": "length",
+          "data_type": "INTEGER",
+          "column_constraint": "CHECK (length IS NULL OR length > 0)"
+        },
+        {
+          "column_name": "comment",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL DEFAULT ''"
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "video",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT FALSE\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "recording_rating_raw",
+      "columns": [
+        {
+          "column_name": "recording",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references recording.id\n    "
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor.id\n    "
+        },
+        {
+          "column_name": "rating",
+          "data_type": "SMALLINT",
+          "column_constraint": "NOT NULL CHECK (rating >= 0 AND rating <= 100)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "recording_tag_raw",
+      "columns": [
+        {
+          "column_name": "recording",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references recording.id\n    "
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor.id\n    "
+        },
+        {
+          "column_name": "tag",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references tag.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "recording_annotation",
+      "columns": [
+        {
+          "column_name": "recording",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references recording.id\n    "
+        },
+        {
+          "column_name": "annotation",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references annotation.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "recording_meta",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references recording.id CASCADE\n    "
+        },
+        {
+          "column_name": "rating",
+          "data_type": "SMALLINT",
+          "column_constraint": "CHECK (rating >= 0 AND rating <= 100)"
+        },
+        {
+          "column_name": "rating_count",
+          "data_type": "INTEGER"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "recording_gid_redirect",
+      "columns": [
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "new_id",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references recording.id\n    "
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "recording_tag",
+      "columns": [
+        {
+          "column_name": "recording",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references recording.id\n    "
+        },
+        {
+          "column_name": "tag",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references tag.id\n    "
+        },
+        {
+          "column_name": "count",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "artist_credit",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist_credit.id\n    "
+        },
+        {
+          "column_name": "release_group",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release_group.id\n    "
+        },
+        {
+          "column_name": "status",
+          "data_type": "INTEGER",
+          "comment": "-- references release_status.id\n    "
+        },
+        {
+          "column_name": "packaging",
+          "data_type": "INTEGER",
+          "comment": "-- references release_packaging.id\n    "
+        },
+        {
+          "column_name": "language",
+          "data_type": "INTEGER",
+          "comment": "-- references language.id\n    "
+        },
+        {
+          "column_name": "script",
+          "data_type": "INTEGER",
+          "comment": "-- references script.id\n    "
+        },
+        {
+          "column_name": "barcode",
+          "data_type": "VARCHAR(255)"
+        },
+        {
+          "column_name": "comment",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL DEFAULT ''"
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "quality",
+          "data_type": "SMALLINT",
+          "column_constraint": "NOT NULL DEFAULT -1"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_country",
+      "columns": [
+        {
+          "column_name": "release",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references release.id\n  "
+        },
+        {
+          "column_name": "country",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references country_area.area\n  "
+        },
+        {
+          "column_name": "date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "date_day",
+          "data_type": "SMALLINT"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_unknown_country",
+      "columns": [
+        {
+          "column_name": "release",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references release.id\n  "
+        },
+        {
+          "column_name": "date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "date_day",
+          "data_type": "SMALLINT"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_raw",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "title",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "artist",
+          "data_type": "VARCHAR(255)"
+        },
+        {
+          "column_name": "added",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "last_modified",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "lookup_count",
+          "data_type": "INTEGER",
+          "column_constraint": "DEFAULT 0"
+        },
+        {
+          "column_name": "modify_count",
+          "data_type": "INTEGER",
+          "column_constraint": "DEFAULT 0"
+        },
+        {
+          "column_name": "source",
+          "data_type": "INTEGER",
+          "column_constraint": "DEFAULT 0"
+        },
+        {
+          "column_name": "barcode",
+          "data_type": "VARCHAR(255)"
+        },
+        {
+          "column_name": "comment",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL DEFAULT ''\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_tag_raw",
+      "columns": [
+        {
+          "column_name": "release",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references release.id\n    "
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor.id\n    "
+        },
+        {
+          "column_name": "tag",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references tag.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_annotation",
+      "columns": [
+        {
+          "column_name": "release",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references release.id\n    "
+        },
+        {
+          "column_name": "annotation",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references annotation.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_gid_redirect",
+      "columns": [
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "new_id",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release.id\n    "
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "other_sql": "CREATE TYPE cover_art_presence AS ENUM ('absent', 'present', 'darkened');\n\n"
+  },
+  {
+    "create_table": {
+      "table_name": "release_meta",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references release.id CASCADE\n    "
+        },
+        {
+          "column_name": "date_added",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "info_url",
+          "data_type": "VARCHAR(255)"
+        },
+        {
+          "column_name": "amazon_asin",
+          "data_type": "VARCHAR(10)"
+        },
+        {
+          "column_name": "amazon_store",
+          "data_type": "VARCHAR(20)"
+        },
+        {
+          "column_name": "cover_art_presence",
+          "data_type": "cover_art_presence",
+          "column_constraint": "NOT NULL DEFAULT 'absent'\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_coverart",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references release.id CASCADE\n    "
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE"
+        },
+        {
+          "column_name": "cover_art_url",
+          "data_type": "VARCHAR(255)"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_label",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "release",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release.id\n    "
+        },
+        {
+          "column_name": "label",
+          "data_type": "INTEGER",
+          "comment": "-- references label.id\n    "
+        },
+        {
+          "column_name": "catalog_number",
+          "data_type": "VARCHAR(255)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_packaging",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_status",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_tag",
+      "columns": [
+        {
+          "column_name": "release",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references release.id\n    "
+        },
+        {
+          "column_name": "tag",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references tag.id\n    "
+        },
+        {
+          "column_name": "count",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_group",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "artist_credit",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist_credit.id\n    "
+        },
+        {
+          "column_name": "type",
+          "data_type": "INTEGER",
+          "comment": "-- references release_group_primary_type.id\n    "
+        },
+        {
+          "column_name": "comment",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL DEFAULT ''"
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_group_rating_raw",
+      "columns": [
+        {
+          "column_name": "release_group",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references release_group.id\n    "
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor.id\n    "
+        },
+        {
+          "column_name": "rating",
+          "data_type": "SMALLINT",
+          "column_constraint": "NOT NULL CHECK (rating >= 0 AND rating <= 100)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_group_tag_raw",
+      "columns": [
+        {
+          "column_name": "release_group",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references release_group.id\n    "
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor.id\n    "
+        },
+        {
+          "column_name": "tag",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references tag.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_group_annotation",
+      "columns": [
+        {
+          "column_name": "release_group",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references release_group.id\n    "
+        },
+        {
+          "column_name": "annotation",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references annotation.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_group_gid_redirect",
+      "columns": [
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "new_id",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release_group.id\n    "
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_group_meta",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references release_group.id CASCADE\n    "
+        },
+        {
+          "column_name": "release_count",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "first_release_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "first_release_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "first_release_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "rating",
+          "data_type": "SMALLINT",
+          "column_constraint": "CHECK (rating >= 0 AND rating <= 100)"
+        },
+        {
+          "column_name": "rating_count",
+          "data_type": "INTEGER"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_group_tag",
+      "columns": [
+        {
+          "column_name": "release_group",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references release_group.id\n    "
+        },
+        {
+          "column_name": "tag",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references tag.id\n    "
+        },
+        {
+          "column_name": "count",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_group_primary_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_group_secondary_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL",
+          "column_constraint": "NOT NULL",
+          "comment": "-- pk\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "release_group_secondary_type_join",
+      "columns": [
+        {
+          "column_name": "release_group",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references release_group.id,\n    "
+        },
+        {
+          "column_name": "secondary_type",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references release_group_secondary_type.id\n    "
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE NOT NULL DEFAULT now()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "script",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "iso_code",
+          "data_type": "CHAR(4)",
+          "column_constraint": "NOT NULL",
+          "comment": "-- ISO 15924\n    "
+        },
+        {
+          "column_name": "iso_number",
+          "data_type": "CHAR(3)",
+          "column_constraint": "NOT NULL",
+          "comment": "-- ISO 15924\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(100)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "frequency",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "script_language",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "script",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references script.id\n    "
+        },
+        {
+          "column_name": "language",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references language.id\n    "
+        },
+        {
+          "column_name": "frequency",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "tag",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "ref_count",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "tag_relation",
+      "columns": [
+        {
+          "column_name": "tag1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references tag.id\n    "
+        },
+        {
+          "column_name": "tag2",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references tag.id\n    "
+        },
+        {
+          "column_name": "weight",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "track",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "recording",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references recording.id\n    "
+        },
+        {
+          "column_name": "medium",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references medium.id\n    "
+        },
+        {
+          "column_name": "position",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "number",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "artist_credit",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist_credit.id\n    "
+        },
+        {
+          "column_name": "length",
+          "data_type": "INTEGER",
+          "column_constraint": "CHECK (length IS NULL OR length > 0)"
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "track_gid_redirect",
+      "columns": [
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "new_id",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references track.id\n    "
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "track_raw",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "release",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release_raw.id\n    "
+        },
+        {
+          "column_name": "title",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "artist",
+          "data_type": "VARCHAR(255)",
+          "comment": "-- For VA albums, otherwise empty\n    "
+        },
+        {
+          "column_name": "sequence",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "medium_index",
+      "columns": [
+        {
+          "column_name": "medium",
+          "data_type": "INTEGER",
+          "comment": "-- PK, references medium.id CASCADE\n    "
+        },
+        {
+          "column_name": "toc",
+          "data_type": "CUBE"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "url",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "url",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "url_gid_redirect",
+      "columns": [
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "new_id",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references url.id\n    "
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "vote",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references editor.id\n    "
+        },
+        {
+          "column_name": "edit",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references edit.id\n    "
+        },
+        {
+          "column_name": "vote",
+          "data_type": "SMALLINT",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "vote_time",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "superseded",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT FALSE\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "work",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "type",
+          "data_type": "INTEGER",
+          "comment": "-- references work_type.id\n    "
+        },
+        {
+          "column_name": "comment",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL DEFAULT ''"
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "language",
+          "data_type": "INTEGER",
+          "comment": "-- references language.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "work_rating_raw",
+      "columns": [
+        {
+          "column_name": "work",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references work.id\n    "
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor.id\n    "
+        },
+        {
+          "column_name": "rating",
+          "data_type": "SMALLINT",
+          "column_constraint": "NOT NULL CHECK (rating >= 0 AND rating <= 100)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "work_tag_raw",
+      "columns": [
+        {
+          "column_name": "work",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references work.id\n    "
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor.id\n    "
+        },
+        {
+          "column_name": "tag",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references tag.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "work_alias_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "work_alias",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "work",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references work.id\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "locale",
+          "data_type": "TEXT"
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "type",
+          "data_type": "INTEGER",
+          "comment": "-- references work_alias_type.id\n    "
+        },
+        {
+          "column_name": "sort_name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "begin_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "primary_for_locale",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT false"
+        },
+        {
+          "column_name": "ended",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT FALSE\n      CHECK (\n        (\n          -- If any end date fields are not null, then ended must be true\n          (end_date_year IS NOT NULL OR\n           end_date_month IS NOT NULL OR\n           end_date_day IS NOT NULL) AND\n          ended = TRUE\n        ) OR (\n          -- Otherwise, all end date fields must be null\n          (end_date_year IS NULL AND\n           end_date_month IS NULL AND\n           end_date_day IS NULL)\n        )\n      )"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "work_annotation",
+      "columns": [
+        {
+          "column_name": "work",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references work.id\n    "
+        },
+        {
+          "column_name": "annotation",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references annotation.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "work_gid_redirect",
+      "columns": [
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "new_id",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references work.id\n    "
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "work_meta",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references work.id CASCADE\n    "
+        },
+        {
+          "column_name": "rating",
+          "data_type": "SMALLINT",
+          "column_constraint": "CHECK (rating >= 0 AND rating <= 100)"
+        },
+        {
+          "column_name": "rating_count",
+          "data_type": "INTEGER"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "work_tag",
+      "columns": [
+        {
+          "column_name": "work",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references work.id\n    "
+        },
+        {
+          "column_name": "tag",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references tag.id\n    "
+        },
+        {
+          "column_name": "count",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "work_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "work_attribute_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "comment",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL DEFAULT ''"
+        },
+        {
+          "column_name": "free_text",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "work_attribute_type_allowed_value",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "work_attribute_type",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references work_attribute_type.id\n    "
+        },
+        {
+          "column_name": "value",
+          "data_type": "TEXT"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "work_attribute",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "work",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references work.id\n    "
+        },
+        {
+          "column_name": "work_attribute_type",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references work_attribute_type.id\n    "
+        },
+        {
+          "column_name": "work_attribute_type_allowed_value",
+          "data_type": "INTEGER",
+          "comment": "-- references work_attribute_type_allowed_value.id\n    "
+        },
+        {
+          "column_name": "work_attribute_text",
+          "data_type": "TEXT",
+          "column_constraint": "CHECK (\n        (work_attribute_type_allowed_value IS NULL AND work_attribute_text IS NOT NULL)\n        OR\n        (work_attribute_type_allowed_value IS NOT NULL AND work_attribute_text IS NULL)\n    )\n"
+        }
+      ]
+    }
+  },
+  {
+    "other_sql": "COMMIT;\n\n"
+  },
+  {
+    "comment": {
+      "comment": "-- vi: set ts=4 sw=4 et :\n"
+    }
+  }
+]
