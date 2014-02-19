@@ -1,6 +1,8 @@
 # TO DO
 
-* ETA
+* PK indexes
+* denormalization
+
 * MD5SUM check
 * load dependency
 * references DAG

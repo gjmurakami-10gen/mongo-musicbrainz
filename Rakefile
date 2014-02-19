@@ -39,7 +39,6 @@ ENV['MONGODB_URI'] = MONGODB_URI
 
 RSpec::Core::RakeTask.new(:spec)
 
-
 def path_file_to_s(*args)
   File.join(*(args[0..-2] << file_to_s(File.join(*args))))
 end
@@ -101,7 +100,7 @@ end
 
 task :load_tables => 'schema/create_tables.json' do
   table_names = Dir["data/fullexport/#{file_to_s(LATEST_FILE)}/mbdump/*"].collect{|file_name| File.basename(file_name) }
-  sh "./script/mbdump_to_mongo.rb #{table_names.join(' ')}"
+  sh "time ./script/mbdump_to_mongo.rb #{table_names.join(' ')}"
 end
 
 task :load_table_test => 'schema/create_tables.json' do

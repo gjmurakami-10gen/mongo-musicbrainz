@@ -21,6 +21,13 @@ require 'benchmark'
 require 'ruby-prof'
 require 'trollop'
 
+
+class Fixnum
+  def to_s_with_comma
+    self.to_s.gsub(/(\d)(?=(\d\d\d)+(?!\d))/, "\\1,")
+  end
+end
+
 def profile
   result = RubyProf.profile { yield }
   RubyProf::FlatPrinter.new(result).print(STDOUT)
@@ -37,6 +44,7 @@ LATEST = "#{FULLEXPORT_DIR}/LATEST"
 MBDUMP_DIR = "#{BASE_DIR}/data/fullexport/#{file_to_s(LATEST)}/mbdump"
 SCHEMA_FILE = "#{BASE_DIR}/schema/create_tables.json"
 
+$create_tables = JSON.parse(IO.read(SCHEMA_FILE))
 $client = Mongo::MongoClient.from_uri
 $db = $client['musicbrainz']
 $collection = nil
@@ -74,28 +82,35 @@ $transform = {
 def load_table(name)
   $collection = $db[name]
   $collection.remove
-  create_tables = JSON.parse(IO.read(SCHEMA_FILE))
-  statement = create_tables.find{|sql| sql.has_key?('create_table') && sql['create_table']['table_name'] == name}
+
+  statement = $create_tables.find{|sql| sql.has_key?('create_table') && sql['create_table']['table_name'] == name}
   create_table = statement['create_table']
   table_name = create_table['table_name']
   columns = create_table['columns']
   file_name = "#{MBDUMP_DIR}/#{table_name}"
   slice_size = $options[:profile] ? 10_000 : 100_000
-  IO.foreach(file_name).each_slice(slice_size) do |lines|
+  count = 0
+  real = 0.0
+  file = File.open(file_name)
+  file.each_slice(slice_size) do |lines|
+    count += lines.count
     bm = Benchmark.measure do
       docs = lines.collect do |line|
         values = line.chomp.split(/\t/, -1)
         zip = columns.zip(values).select{|e| e[1] != "\\N" }
         doc = zip.collect do |column, value|
           transform = $transform.fetch(column['data_type']){|key| raise "$transform[#{key.inspect} unimplemented value:#{value.inspect}"}
+          key = column['column_name']
+          key = '_id' if key == 'id'
           value = transform.call(value) if transform
-          [column['column_name'], value]
+          [key, value]
         end
         Hash[*doc.flatten(1)]
       end
       $collection.insert(docs)
     end
-    puts "real:#{bm.real} docs_per_sec:#{(lines.size.to_f/bm.real).round} user:#{(100.0*bm.utime/bm.real).round}%"
+    real += bm.real
+    puts "collection:#{name.inspect} pos:#{(100.0*file.pos/file.size).round}% real:#{real.round} count:#{count.to_s_with_comma} docs_per_sec:#{(lines.size.to_f/bm.real).round}"
     break if $options[:profile]
   end
 end
@@ -109,8 +124,8 @@ end
 
 abort banner if ARGV.size < 1
 
-ARGV.each do |arg|
-  p arg
+ARGV.each_with_index do |arg, index|
+  puts "[#{index+1} of #{ARGV.size}] #{arg}"
   if $options[:profile]
     profile { load_table(arg) }
   else
