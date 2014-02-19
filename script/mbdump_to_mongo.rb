@@ -22,9 +22,10 @@ def file_to_s(file)
 end
 
 BASE_DIR = File.expand_path('../..', __FILE__)
-FTP_BASE = "#{BASE_DIR}/ftp.musicbrainz.org/pub/musicbrainz/data/fullexport"
-LATEST = "#{FTP_BASE}/LATEST"
-MBDUMP = "#{BASE_DIR}/data/fullexport/#{file_to_s(LATEST)}/mbdump"
+FULLEXPORT_DIR = "#{BASE_DIR}/ftp.musicbrainz.org/pub/musicbrainz/data/fullexport"
+LATEST = "#{FULLEXPORT_DIR}/LATEST"
+MBDUMP_DIR = "#{BASE_DIR}/data/fullexport/#{file_to_s(LATEST)}/mbdump"
+SCHEMA_FILE = "#{BASE_DIR}/schema/create_tables.json"
 
 $transform = {
     'BOOLEAN' => Proc.new {|s| if s == 't'; true; elsif s == 'f'; false; else raise 'BOOLEAN'; end },
@@ -55,12 +56,12 @@ $transform = {
 }
 
 def load_table(name)
-  create_tables = JSON.parse(IO.read('create_tables.json'))
+  create_tables = JSON.parse(IO.read(SCHEMA_FILE))
   statement = create_tables.find{|sql| sql.has_key?('create_table') && sql['create_table']['table_name'] == name}
   create_table = statement['create_table']
   table_name = create_table['table_name']
   columns = create_table['columns']
-  file_name = "#{MBDUMP}/#{table_name}"
+  file_name = "#{MBDUMP_DIR}/#{table_name}"
   IO.foreach(file_name).each_slice(2) do |lines|
     docs = lines.collect do |line|
       values = line.chomp.split(/\t/, -1)

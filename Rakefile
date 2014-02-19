@@ -55,9 +55,9 @@ task :unarchive => LATEST do
 end
 
 $CreateTables_sql = "musicbrainz-server/admin/sql/CreateTables.sql"
-$CreateTables_sql = 'CreateTables.sql'
+$CreateTables_sql = 'schema/CreateTables.sql'
 
-file 'create_tables.json' => [ $CreateTables_sql, 'lib/parslet_sql.rb' ] do |file|
+file 'schema/create_tables.json' => [ $CreateTables_sql, 'lib/parslet_sql.rb' ] do |file|
   sql_text = IO.read($CreateTables_sql)
   m = CreateTablesParser.new.parse(sql_text)
   File.open(file.name, 'w') {|fio| fio.write(JSON.pretty_generate(m)) }
@@ -66,8 +66,8 @@ end
 # PK - Primary Key index hint
 # references table.column - relation in comment
 
-task :references => 'create_tables.json' do
-  JSON.parse(IO.read('create_tables.json')).each do |sql|
+task :references => 'schema/create_tables.json' do
+  JSON.parse(IO.read('schema/create_tables.json')).each do |sql|
     if sql.has_key?('create_table')
       create_table = sql['create_table']
       columns = create_table['columns']
@@ -79,8 +79,8 @@ task :references => 'create_tables.json' do
   end
 end
 
-task :extract => 'create_tables.json' do
-  JSON.parse(IO.read('create_tables.json')).each do |sql|
+task :extract => 'schema/create_tables.json' do
+  JSON.parse(IO.read('schema/create_tables.json')).each do |sql|
     if sql.has_key?('create_table')
       create_table = sql['create_table']
       table_name = create_table['table_name']
@@ -90,7 +90,7 @@ task :extract => 'create_tables.json' do
   end
 end
 
-task :load_tables => 'create_tables.json' do
+task :load_tables => 'schema/create_tables.json' do
   table_names = Dir["data/fullexport/#{file_to_s(LATEST)}/mbdump/*"].collect{|file_name| File.basename(file_name) }
   p table_names
   sh "./script/mbdump_to_mongo.rb #{table_names.join(' ')}"
