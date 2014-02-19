@@ -20,15 +20,25 @@ require_relative 'lib/parslet_sql'
 
 # http://www.postgresql.org/docs/9.1/static/sql-createtable.html
 
-FTP_BASE = "ftp.musicbrainz.org/pub/musicbrainz/data/fullexport"
-LATEST = "#{FTP_BASE}/LATEST"
-MBDUMP = "#{FTP_BASE}/#{IO.read(LATEST).chomp}/mbdump.tar.bz2"
-
-RSpec::Core::RakeTask.new(:spec)
-
 def file_to_s(file)
   IO.read(file).chomp
 end
+
+FTP_FULLEXPORT_DIR = "ftp.musicbrainz.org/pub/musicbrainz/data/fullexport"
+LATEST_FILE = "#{FTP_FULLEXPORT_DIR}/LATEST"
+LATEST = file_to_s(LATEST_FILE)
+FTP_LATEST_DIR = "#{FTP_FULLEXPORT_DIR}/#{LATEST}"
+DATA_LATEST_DIR = "data/fullexport/#{LATEST}"
+
+MONGO_DBPATH = "data/db/#{LATEST}"
+MONGOD_PORT = 37017
+MONGOD_LOCKPATH = "#{MONGO_DBPATH}/mongod.lock"
+MONGOD_LOGPATH = "#{MONGO_DBPATH}/mongod.log"
+MONGODB_URI = "mongodb://localhost:#{MONGOD_PORT}"
+ENV['MONGODB_URI'] = MONGODB_URI
+
+RSpec::Core::RakeTask.new(:spec)
+
 
 def path_file_to_s(*args)
   File.join(*(args[0..-2] << file_to_s(File.join(*args))))
@@ -38,19 +48,18 @@ task :default => [:load_tables] do
   sh "echo Hello World!"
 end
 
-file LATEST do |file|
+file LATEST_FILE do |file|
   sh "wget --recursive ftp://#{file.name}" # need --recursive to retrieve the new version
 end
 
-task :fetch => LATEST do
-  sh "wget --recursive -level=1 --continue #{path_file_to_s(FTP_BASE, 'LATEST')}"
+task :fetch => LATEST_FILE do
+  sh "wget --recursive -level=1 --continue #{FTP_LATEST_DIR}"
 end
 
-task :unarchive => LATEST do
-  mbdump_tar = File.join(path_file_to_s(File.dirname(__FILE__), FTP_BASE, 'LATEST'), 'mbdump.tar.bz2')
-  dest_dir = "data/fullexport/#{file_to_s(LATEST)}"
-  FileUtils.mkdir_p(dest_dir)
-  Dir.chdir(dest_dir)
+task :unarchive => LATEST_FILE do
+  mbdump_tar = File.join(FTP_LATEST_DIR, 'mbdump.tar.bz2')
+  FileUtils.mkdir_p(DATA_LATEST_DIR)
+  Dir.chdir(DATA_LATEST_DIR)
   sh "tar -xf '#{mbdump_tar}'"
 end
 
@@ -91,7 +100,23 @@ task :extract => 'schema/create_tables.json' do
 end
 
 task :load_tables => 'schema/create_tables.json' do
-  table_names = Dir["data/fullexport/#{file_to_s(LATEST)}/mbdump/*"].collect{|file_name| File.basename(file_name) }
-  p table_names
+  table_names = Dir["data/fullexport/#{file_to_s(LATEST_FILE)}/mbdump/*"].collect{|file_name| File.basename(file_name) }
   sh "./script/mbdump_to_mongo.rb #{table_names.join(' ')}"
+end
+
+task :load_table_test => 'schema/create_tables.json' do
+  sh "MONGODB_URI=#{MONGODB_URI} ./script/mbdump_to_mongo.rb artist"
+end
+
+namespace :mongo do
+  task :start do
+    FileUtils.mkdir_p(MONGO_DBPATH) unless File.directory?(MONGO_DBPATH)
+    sh "mongod --dbpath #{MONGO_DBPATH} --port #{MONGOD_PORT} --fork --logpath #{MONGOD_LOGPATH}"
+  end
+  task :status do
+    sh "ps -fp #{file_to_s(MONGOD_LOCKPATH)}" if File.size?(MONGOD_LOCKPATH)
+  end
+  task :stop do
+    sh "kill #{file_to_s(MONGOD_LOCKPATH)}" if File.size?(MONGOD_LOCKPATH)
+  end
 end

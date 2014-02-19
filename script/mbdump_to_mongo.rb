@@ -16,6 +16,16 @@
 require 'time'
 require 'json'
 require 'pp'
+require 'mongo'
+require 'benchmark'
+require 'ruby-prof'
+require 'trollop'
+
+def profile
+  result = RubyProf.profile { yield }
+  RubyProf::FlatPrinter.new(result).print(STDOUT)
+  RubyProf::GraphPrinter.new(result).print(STDOUT)
+end
 
 def file_to_s(file)
   IO.read(file).chomp
@@ -26,6 +36,12 @@ FULLEXPORT_DIR = "#{BASE_DIR}/ftp.musicbrainz.org/pub/musicbrainz/data/fullexpor
 LATEST = "#{FULLEXPORT_DIR}/LATEST"
 MBDUMP_DIR = "#{BASE_DIR}/data/fullexport/#{file_to_s(LATEST)}/mbdump"
 SCHEMA_FILE = "#{BASE_DIR}/schema/create_tables.json"
+
+$client = Mongo::MongoClient.from_uri
+$db = $client['musicbrainz']
+$collection = nil
+
+$options = {}
 
 $transform = {
     'BOOLEAN' => Proc.new {|s| if s == 't'; true; elsif s == 'f'; false; else raise 'BOOLEAN'; end },
@@ -56,29 +72,50 @@ $transform = {
 }
 
 def load_table(name)
+  $collection = $db[name]
+  $collection.remove
   create_tables = JSON.parse(IO.read(SCHEMA_FILE))
   statement = create_tables.find{|sql| sql.has_key?('create_table') && sql['create_table']['table_name'] == name}
   create_table = statement['create_table']
   table_name = create_table['table_name']
   columns = create_table['columns']
   file_name = "#{MBDUMP_DIR}/#{table_name}"
-  IO.foreach(file_name).each_slice(2) do |lines|
-    docs = lines.collect do |line|
-      values = line.chomp.split(/\t/, -1)
-      zip = columns.zip(values).select{|e| e[1] != "\\N" }
-      doc = zip.collect do |column, value|
-        transform = $transform.fetch(column['data_type']){|key| raise "$transform[#{key.inspect} unimplemented value:#{value.inspect}"}
-        value = transform.call(value) if transform
-        [column['column_name'], value]
+  slice_size = $options[:profile] ? 10_000 : 100_000
+  IO.foreach(file_name).each_slice(slice_size) do |lines|
+    bm = Benchmark.measure do
+      docs = lines.collect do |line|
+        values = line.chomp.split(/\t/, -1)
+        zip = columns.zip(values).select{|e| e[1] != "\\N" }
+        doc = zip.collect do |column, value|
+          transform = $transform.fetch(column['data_type']){|key| raise "$transform[#{key.inspect} unimplemented value:#{value.inspect}"}
+          value = transform.call(value) if transform
+          [column['column_name'], value]
+        end
+        Hash[*doc.flatten(1)]
       end
-      Hash[*doc.flatten(1)]
+      $collection.insert(docs)
     end
-    p docs
-    break
+    puts "real:#{bm.real} docs_per_sec:#{(lines.size.to_f/bm.real).round} user:#{(100.0*bm.utime/bm.real).round}%"
+    break if $options[:profile]
   end
 end
 
+banner = "usage: #{$0} [options] table_names"
+
+$options = Trollop::options do
+  banner banner
+  opt :profile, "Profile", :short => 'p', :default => false
+end
+
+abort banner if ARGV.size < 1
+
 ARGV.each do |arg|
   p arg
-  load_table(arg)
+  if $options[:profile]
+    profile { load_table(arg) }
+  else
+    load_table(arg)
+  end
 end
+
+$client.close
