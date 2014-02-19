@@ -25,7 +25,7 @@ def file_to_s(file)
   IO.read(file).chomp
 end
 
-FTP_FULLEXPORT_DIR = "ftp.musicbrainz.org/pub/musicbrainz/data/fullexport"
+FTP_FULLEXPORT_DIR = File.absolute_path("ftp.musicbrainz.org/pub/musicbrainz/data/fullexport")
 LATEST_FILE = "#{FTP_FULLEXPORT_DIR}/LATEST"
 LATEST = file_to_s(LATEST_FILE)
 FTP_LATEST_DIR = "#{FTP_FULLEXPORT_DIR}/#{LATEST}"
