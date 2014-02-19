@@ -43,10 +43,11 @@ FULLEXPORT_DIR = "#{BASE_DIR}/ftp.musicbrainz.org/pub/musicbrainz/data/fullexpor
 LATEST = "#{FULLEXPORT_DIR}/LATEST"
 MBDUMP_DIR = "#{BASE_DIR}/data/fullexport/#{file_to_s(LATEST)}/mbdump"
 SCHEMA_FILE = "#{BASE_DIR}/schema/create_tables.json"
+MONGO_DBNAME = "musicbrainz"
 
 $create_tables = JSON.parse(IO.read(SCHEMA_FILE))
 $client = Mongo::MongoClient.from_uri
-$db = $client['musicbrainz']
+$db = $client[MONGO_DBNAME]
 $collection = nil
 
 $options = {}
@@ -110,7 +111,7 @@ def load_table(name)
       $collection.insert(docs)
     end
     real += bm.real
-    puts "collection:#{name.inspect} pos:#{(100.0*file.pos/file.size).round}% real:#{real.round} count:#{count.to_s_with_comma} docs_per_sec:#{(lines.size.to_f/bm.real).round}"
+    puts "collection:#{name} pos:#{(100.0*file.pos/file.size).round}% real:#{real.round} count:#{count.to_s_with_comma} docs_per_sec:#{(lines.size.to_f/bm.real).round}"
     break if $options[:profile]
   end
 end

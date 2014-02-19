@@ -17,6 +17,7 @@ require 'json'
 require 'pp'
 require 'rspec/core/rake_task'
 require_relative 'lib/parslet_sql'
+require 'mongo'
 
 # http://www.postgresql.org/docs/9.1/static/sql-createtable.html
 
@@ -34,6 +35,7 @@ MONGO_DBPATH = "data/db/#{LATEST}"
 MONGOD_PORT = 37017
 MONGOD_LOCKPATH = "#{MONGO_DBPATH}/mongod.lock"
 MONGOD_LOGPATH = "#{MONGO_DBPATH}/mongod.log"
+MONGO_DBNAME = "musicbrainz"
 MONGODB_URI = "mongodb://localhost:#{MONGOD_PORT}"
 ENV['MONGODB_URI'] = MONGODB_URI
 
@@ -73,6 +75,28 @@ end
 
 # PK - Primary Key index hint
 # references table.column - relation in comment
+
+task :indexes => 'schema/create_tables.json' do
+  client = Mongo::MongoClient.from_uri(MONGODB_URI)
+  db = $client[MONGO_DBNAME]
+  JSON.parse(IO.read('schema/create_tables.json')).each do |sql|
+    if sql.has_key?('create_table')
+      create_table = sql['create_table']
+      table_name = create_table['table_name']
+      columns = create_table['columns']
+      columns.each do |column|
+        column_name = column['column_name']
+        comment = column['comment']
+        if comment =~ /PK/
+          puts "table_name:#{table_name} column_name:#{column_name} comment:#{comment.inspect}"
+          #collection = db[table_name]
+          #collection.ensure_index(column_name => Mongo::ASCENDING)
+        end
+      end
+    end
+  end
+  client.close
+end
 
 task :references => 'schema/create_tables.json' do
   JSON.parse(IO.read('schema/create_tables.json')).each do |sql|
