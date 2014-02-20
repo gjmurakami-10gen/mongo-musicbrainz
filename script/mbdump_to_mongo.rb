@@ -21,7 +21,6 @@ require 'benchmark'
 require 'ruby-prof'
 require 'trollop'
 
-
 class Fixnum
   def to_s_with_comma
     self.to_s.gsub(/(\d)(?=(\d\d\d)+(?!\d))/, "\\1,")

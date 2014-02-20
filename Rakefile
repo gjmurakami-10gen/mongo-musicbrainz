@@ -94,6 +94,11 @@ task :load_tables => 'schema/create_tables.json' do
   sh "time ./script/mbdump_to_mongo.rb #{table_names.join(' ')}"
 end
 
+desc "merge_enums"
+task :merge_enums => 'schema/create_tables.json' do  table_names = Dir["data/fullexport/#{file_to_s(LATEST_FILE)}/mbdump/*"].collect{|file_name| File.basename(file_name) }
+  sh "time ./script/merge_enum_types.rb"
+end
+
 # PK - Primary Key index hint
 # references table.column - relation in comment
 
