@@ -53,10 +53,12 @@ file LATEST_FILE do |file|
   sh "wget --recursive ftp://#{file.name}" # need --recursive to retrieve the new version
 end
 
+desc "fetch"
 task :fetch => LATEST_FILE do
   sh "wget --recursive -level=1 --continue #{FTP_LATEST_DIR}"
 end
 
+desc "unarchive"
 task :unarchive => LATEST_FILE do
   mbdump_tar = File.join(FTP_LATEST_DIR, 'mbdump.tar.bz2')
   FileUtils.mkdir_p(DATA_LATEST_DIR)
@@ -71,6 +73,25 @@ file 'schema/create_tables.json' => [ $CreateTables_sql, 'lib/parslet_sql.rb' ] 
   sql_text = IO.read($CreateTables_sql)
   m = CreateTablesParser.new.parse(sql_text)
   File.open(file.name, 'w') {|fio| fio.write(JSON.pretty_generate(m)) }
+end
+
+namespace :mongo do
+  task :start do
+    FileUtils.mkdir_p(MONGO_DBPATH) unless File.directory?(MONGO_DBPATH)
+    sh "mongod --dbpath #{MONGO_DBPATH} --port #{MONGOD_PORT} --fork --logpath #{MONGOD_LOGPATH}"
+  end
+  task :status do
+    sh "ps -fp #{file_to_s(MONGOD_LOCKPATH)}" if File.size?(MONGOD_LOCKPATH)
+  end
+  task :stop do
+    sh "kill #{file_to_s(MONGOD_LOCKPATH)}" if File.size?(MONGOD_LOCKPATH)
+  end
+end
+
+desc "load_tables"
+task :load_tables => 'schema/create_tables.json' do
+  table_names = Dir["data/fullexport/#{file_to_s(LATEST_FILE)}/mbdump/*"].collect{|file_name| File.basename(file_name) }
+  sh "time ./script/mbdump_to_mongo.rb #{table_names.join(' ')}"
 end
 
 # PK - Primary Key index hint
@@ -102,44 +123,17 @@ task :references => 'schema/create_tables.json' do
   JSON.parse(IO.read('schema/create_tables.json')).each do |sql|
     if sql.has_key?('create_table')
       create_table = sql['create_table']
+      table_name = create_table['table_name']
       columns = create_table['columns']
       columns.each do |column|
+        column_name = column['column_name']
         comment = column['comment']
-        pp comment if comment =~ /references/
+        if comment =~ /references/
+          reference = comment[/references\s+([.\w]+)/,1] #comment[/references\s+([\w]+\.g?id)/,1]
+          raise "#{table_name}.#{column_name} #{comment}" if !reference && comment !~ /language|weakly|attribute_type|country_area/
+          puts "#{table_name}.#{column_name} references #{reference}"
+        end
       end
     end
-  end
-end
-
-task :extract => 'schema/create_tables.json' do
-  JSON.parse(IO.read('schema/create_tables.json')).each do |sql|
-    if sql.has_key?('create_table')
-      create_table = sql['create_table']
-      table_name = create_table['table_name']
-      p table_name
-      sh "tar -tf #{MBDUMP} mbdump/#{table_name}"
-    end
-  end
-end
-
-task :load_tables => 'schema/create_tables.json' do
-  table_names = Dir["data/fullexport/#{file_to_s(LATEST_FILE)}/mbdump/*"].collect{|file_name| File.basename(file_name) }
-  sh "time ./script/mbdump_to_mongo.rb #{table_names.join(' ')}"
-end
-
-task :load_table_test => 'schema/create_tables.json' do
-  sh "MONGODB_URI=#{MONGODB_URI} ./script/mbdump_to_mongo.rb artist"
-end
-
-namespace :mongo do
-  task :start do
-    FileUtils.mkdir_p(MONGO_DBPATH) unless File.directory?(MONGO_DBPATH)
-    sh "mongod --dbpath #{MONGO_DBPATH} --port #{MONGOD_PORT} --fork --logpath #{MONGOD_LOGPATH}"
-  end
-  task :status do
-    sh "ps -fp #{file_to_s(MONGOD_LOCKPATH)}" if File.size?(MONGOD_LOCKPATH)
-  end
-  task :stop do
-    sh "kill #{file_to_s(MONGOD_LOCKPATH)}" if File.size?(MONGOD_LOCKPATH)
   end
 end

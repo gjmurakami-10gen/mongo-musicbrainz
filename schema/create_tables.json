@@ -1393,7 +1393,23 @@
     }
   },
   {
-    "other_sql": "CREATE TYPE FLUENCY AS ENUM ('basic', 'intermediate', 'advanced', 'native');\n\n"
+    "create_type": {
+      "type_name": "FLUENCY",
+      "enum": [
+        {
+          "string": "basic"
+        },
+        {
+          "string": "intermediate"
+        },
+        {
+          "string": "advanced"
+        },
+        {
+          "string": "native"
+        }
+      ]
+    }
   },
   {
     "create_table": {
@@ -5343,7 +5359,20 @@
     }
   },
   {
-    "other_sql": "CREATE TYPE cover_art_presence AS ENUM ('absent', 'present', 'darkened');\n\n"
+    "create_type": {
+      "type_name": "cover_art_presence",
+      "enum": [
+        {
+          "string": "absent"
+        },
+        {
+          "string": "present"
+        },
+        {
+          "string": "darkened"
+        }
+      ]
+    }
   },
   {
     "create_table": {

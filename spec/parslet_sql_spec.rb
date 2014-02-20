@@ -246,10 +246,26 @@ CREATE TABLE artist_alias
   EOT
 
   describe "create_table" do
-    it("should parse table with comments") { parser.create_table.should parse($table_area_annotation) }
-    it("should parse table with table constraint") { parser.create_table.should parse($artist_table) }
-    it("should parse table with table constraint") { parser.create_table.should parse($tag_relation_table) }
-    it("should parse table with table constraint") { parser.create_table.should parse($area_alias_table) }
-    it("should parse table with table constraint") { parser.create_table.should parse($artist_alias_table) }
+    it("should parse table") { parser.create_table.should parse($table_area_annotation) }
+    it("should parse table") { parser.create_table.should parse($artist_table) }
+    it("should parse table") { parser.create_table.should parse($tag_relation_table) }
+    it("should parse table") { parser.create_table.should parse($area_alias_table) }
+    it("should parse table") { parser.create_table.should parse($artist_alias_table) }
+  end
+
+  describe "list" do
+    it("should parse list") { parser.list.should parse("'basic', 'intermediate', 'advanced', 'native'") }
+  end
+
+  describe "enum" do
+    it("should parse list") { parser.enum.should parse("ENUM ('basic', 'intermediate', 'advanced', 'native')") }
+  end
+
+  $fluency_type =  <<-EOT.gsub(/^\s*/, '')
+CREATE TYPE FLUENCY AS ENUM ('basic', 'intermediate', 'advanced', 'native');
+  EOT
+
+  describe "create_type" do
+    it("should parse type") { parser.create_type.should parse($fluency_type) }
   end
 end

@@ -19,12 +19,12 @@ class CreateTablesParser < Parslet::Parser
   rule(:space?) { space.maybe }
   rule(:ident) { match('\w').repeat(1) }
   rule(:int) { match('-').maybe >> match('\d').repeat(1) }
-  rule(:string) { str("'") >> match("[^']").repeat >> str("'") }
+  rule(:literal) { str("'") >> match("[^']").repeat >> str("'") }
   rule(:size) { str('(') >> match('\d').repeat(1) >> str(')') }
   rule(:array) { str('[]') }
   rule(:comment) { (str('--') >> space? >> match('[^\n]').repeat >> match('\n') >> space?).repeat(1).as(:comment) >> space? }
 
-  rule(:sql) { (space | directive.as(:directive) | create_table.as(:create_table) | other_sql.as(:other_sql) | comment.as(:comment)).repeat }
+  rule(:sql) { (space | directive.as(:directive) | create_table.as(:create_table) | create_type.as(:create_type) | other_sql.as(:other_sql) | comment.as(:comment)).repeat }
   rule(:directive) { match('\\\\') >> match('[^\n]').repeat >> space? }
   rule(:create_table) { str('CREATE TABLE') >> space >> table_name >> columns.as(:columns) >> terminator >> space? }
   rule(:table_name) { ident.as(:table_name) >> space? }
@@ -47,12 +47,17 @@ class CreateTablesParser < Parslet::Parser
       ) >> space?
     ).repeat(1).as(:column_constraint)
   }
-  rule(:default_value) { (ident >> call_args.maybe | int | string) >> space? }
+  rule(:default_value) { (ident >> call_args.maybe | int | literal) >> space? }
   rule(:constraint) { (str("CONSTRAINT") >> space >> ident >> space).maybe >> check >> space? }
   rule(:check) { str("CHECK") >> space >> call_args >> space? }
   rule(:call_args) { str("(") >> (not_parens | call_args).repeat >> str(")") >> space? }
   rule(:not_parens) { match('[^()]').repeat(1) }
   rule(:storage_parameter) { str("TIME ZONE") >> space? }
+  rule(:create_type) { str('CREATE TYPE') >> space >> type_name >> str('AS') >> space >> enum.as(:enum)  >> terminator >> space? }
+  rule(:type_name) { ident.as(:type_name) >> space? }
+  rule(:enum) { str('ENUM') >> space >> str('(') >> space? >> list >> str(')') >> space? }
+  rule(:list) { (string >> str(',') >> space?).repeat >> string >> space? }
+  rule(:string) { str("'") >> match("[^']").repeat.as(:string) >> str("'") }
   rule(:terminator) { match(';') >> space? }
   rule(:other_sql) { match('[^;]').repeat(1) >> terminator >> space? }
   root(:sql)
