@@ -43,10 +43,36 @@ def enum_types(create_tables)
   Hash[*enum_types.flatten(1)]
 end
 
+def type_columns(create_tables, type_name)
+  table_columns = create_tables.collect do |sql|
+    if sql.has_key?('create_table')
+      create_table = sql['create_table']
+      table_name = create_table['table_name']
+      column_names = create_table['columns'].collect {|column|
+        (column['data_type'] == type_name) ? column['column_name'] : nil
+      }.compact
+      column_names.empty? ? nil : [table_name, column_names]
+    else
+      nil
+    end
+  end
+  table_columns.compact
+end
+
 $enum_types = enum_types($create_tables)
 $enum_types.each do |type_name, enum|
   p([type_name, enum])
-
+  type_columns($create_tables, type_name).each do |table_name, column_names|
+    if $db.collection_names.include?(table_name)
+      $collection = $db[table_name]
+      column_names.each do |column_name|
+        p column_name
+        p $collection.find({column_name => {'$exists' => true}}).first
+      end
+    else
+      puts "collection #{table_name} not found"
+    end
+  end
 end
 
 
