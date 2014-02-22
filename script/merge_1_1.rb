@@ -21,6 +21,10 @@ require 'benchmark'
 require 'ruby-prof'
 require 'trollop'
 
+def hash_by_key(a, key)
+  Hash[*a.collect{|e| [e[key], e]}.flatten(1)]
+end
+
 BASE_DIR = File.expand_path('../..', __FILE__)
 FULLEXPORT_DIR = "#{BASE_DIR}/ftp.musicbrainz.org/pub/musicbrainz/data/fullexport"
 LATEST = "#{FULLEXPORT_DIR}/LATEST"
@@ -34,20 +38,20 @@ $collection = nil
 
 USAGE = "usage: #{$0} parent.foreign_key child.id"
 abort(USAGE) if ARGV.size != 2
-parent = ARGV[0].split('.', -1)
-child = ARGV[1].split('.', -1)
-abort(USAGE) if parent.size != 2 || child.size != 2
+parent_arg = ARGV[0].split('.', -1)
+child_arg = ARGV[1].split('.', -1)
+abort(USAGE) if parent_arg.size != 2 || child_arg.size != 2
 
-coll_name, coll_key = child
+coll_name, coll_key = child_arg
 coll = $db[coll_name]
 docs = coll.find.to_a
 puts "#{coll_name} count: #{docs.count}"
-child_hash = Hash[*docs.collect{|doc| [doc[coll_key], doc]}.flatten]
+child_hash = hash_by_key(docs, coll_key)
 #p child_hash
 
 SLICE_SIZE = 1000
 
-coll_name, coll_key = parent
+coll_name, coll_key = parent_arg
 coll = $db[coll_name]
 puts "#{coll_name} count: #{coll.count}"
 coll.find.each_slice(SLICE_SIZE) do |doc_slice|

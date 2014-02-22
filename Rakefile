@@ -100,7 +100,7 @@ task :merge_enums => 'schema/create_tables.json' do
 end
 
 desc "merge_1_1"
-task :merge_1_1 => 'schema/create_tables.json' do
+task :merge_1_1 do
   [
       ['area.type', 'area_type._id'],
       ['area_alias.type', 'area_alias_type._id'],
@@ -124,10 +124,18 @@ task :merge_1_1 => 'schema/create_tables.json' do
       ['work_alias.type', 'work_alias_type._id'],
       ['work_attribute_type_allowed_value.work_attribute_type', 'work_attribute_type._id'], # must be before next
       ['work_attribute.work_attribute_type', 'work_attribute_type._id'],
-      ['work_attribute.work_attribute_type_allowed_value', 'work_attribute_type_allowed_value._id'],
-
+      ['work_attribute.work_attribute_type_allowed_value', 'work_attribute_type_allowed_value._id']
   ].each do |parent, child|
     sh "time ./script/merge_1_1.rb #{parent} #{child} || true"
+  end
+end
+
+desc "merge_1_n"
+task :merge_1_n do
+  [
+      ['artist.alias', 'artist_alias.artist']
+  ].each do |parent, child|
+    sh "time ./script/merge_1_n.rb #{parent} #{child} || true"
   end
 end
 
