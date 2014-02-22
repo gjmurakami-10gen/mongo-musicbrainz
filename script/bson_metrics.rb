@@ -36,6 +36,7 @@ bm = Benchmark.measure do
     doc_count += 1
   end
 end
+doc_count = 1 if doc_count < 1
 
 hist = BSON::Registry.class_variable_get(:@@hist)
 element_count = hist.inject{|sum,x| sum + x}
@@ -51,8 +52,9 @@ puts <<-EOT.gsub(/^\s+/, '')
   docs/sec: #{(doc_count.to_f/bm.real).round}
   docs: #{doc_count}
   elements: #{element_count}
-  embeds: #{embed_count}
-  denorm: #{'%.1f' % (embed_count.to_f / doc_count.to_f)}
+  embeds: #{embed_count} (sub-docs+sub-arrays)
+  elements/doc: #{'%.1f' % (element_count.to_f / doc_count.to_f)}
+  denorm: #{'%.1f' % (embed_count.to_f / doc_count.to_f)} (embeds/doc)
   degree: #{'%.1f' % (element_count.to_f / (doc_count + embed_count).to_f)}
 EOT
 puts type_counts.collect{|klass, count| "#{klass}: #{(100.0*count.to_f/element_count.to_f).round}%"}.join("\n")
