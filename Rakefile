@@ -95,8 +95,40 @@ task :load_tables => 'schema/create_tables.json' do
 end
 
 desc "merge_enums"
-task :merge_enums => 'schema/create_tables.json' do  table_names = Dir["data/fullexport/#{file_to_s(LATEST_FILE)}/mbdump/*"].collect{|file_name| File.basename(file_name) }
+task :merge_enums => 'schema/create_tables.json' do
   sh "time ./script/merge_enum_types.rb"
+end
+
+desc "merge_1_1"
+task :merge_1_1 => 'schema/create_tables.json' do
+  [
+      ['area.type', 'area_type._id'],
+      ['area_alias.type', 'area_alias_type._id'],
+      ['artist.type', 'artist_type._id'],
+      ['artist.gender', 'gender._id'],
+      ['artist_alias.type', 'artist_alias_type._id'],
+      ['label.type', 'label_type._id'],
+      ['label_alias.type', 'label_alias_type._id'],
+      ['medium.format', 'medium_format._id'],
+      ['place.type', 'place_type._id'],
+      ['place_alias.type', 'place_alias_type._id'],
+      ['release.language', 'language._id'],
+      ['release.packaging', 'release_packaging._id'],
+      ['release.script', 'script._id'],
+      ['release.status', 'release_status._id'],
+      ['release_group.type', 'release_group_primary_type._id'],
+      ['release_group_secondary_type_join.secondary_type', 'release_group_secondary_type._id'],
+      ['script_language.language', 'language._id'],
+      ['script_language.script', 'script._id'],
+      ['work.type', 'work_type._id'],
+      ['work_alias.type', 'work_alias_type._id'],
+      ['work_attribute_type_allowed_value.work_attribute_type', 'work_attribute_type._id'], # must be before next
+      ['work_attribute.work_attribute_type', 'work_attribute_type._id'],
+      ['work_attribute.work_attribute_type_allowed_value', 'work_attribute_type_allowed_value._id'],
+
+  ].each do |parent, child|
+    sh "time ./script/merge_1_1.rb #{parent} #{child} || true"
+  end
 end
 
 # PK - Primary Key index hint

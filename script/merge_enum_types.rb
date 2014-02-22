@@ -32,8 +32,6 @@ $client = Mongo::MongoClient.from_uri
 $db = $client[MONGO_DBNAME]
 $collection = nil
 
-$options = {}
-
 def enum_types(create_tables)
   create_types = create_tables.select{|sql| sql.has_key?('create_type') && sql['create_type'].has_key?('enum') }
   types_as_enum = create_types.collect{|sql| sql['create_type']}
@@ -74,6 +72,3 @@ $enum_types.each do |type_name, enum|
     end
   end
 end
-
-
-
