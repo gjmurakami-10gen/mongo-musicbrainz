@@ -35,6 +35,20 @@ def ordered_group_by_first(pairs)
   end.first
 end
 
+def bulk_merge(parent_docs_hash, parent_key, child_groups, parent_coll)
+  count = 0
+  bulk = parent_coll.initialize_unordered_bulk_op
+  child_groups.each do |group|
+    key = group.first
+    doc = parent_docs_hash[key] # nil check(?)
+    doc[parent_key] = group.last # nil[] will fail
+    bulk.find({'_id' => key}).replace_one(doc)
+    count += 1
+  end
+  bulk.execute if count > 0
+  count
+end
+
 BASE_DIR = File.expand_path('../..', __FILE__)
 FULLEXPORT_DIR = "#{BASE_DIR}/ftp.musicbrainz.org/pub/musicbrainz/data/fullexport"
 LATEST = "#{FULLEXPORT_DIR}/LATEST"
@@ -54,16 +68,16 @@ abort(USAGE) if parent_arg.size != 2 || child_arg.size != 2
 
 parent_name, parent_key = parent_arg
 parent_coll = $db[parent_name]
-puts "info: parent #{parent_name.inspect} count: #{parent_coll.count}"
+parent_count = parent_coll.count
+puts "info: parent #{parent_name.inspect} count: #{parent_count}"
 
 child_name, child_key = child_arg
 child_coll = $db[child_name]
 child_count = child_coll.count
 puts "info: child #{child_name.inspect} count: #{child_count}"
 
-SLICE_SIZE = 5000
 THRESHOLD = 10000
-puts "info: ******** over #{THRESHOLD} threshold ********" if child_count > THRESHOLD
+SLICE_SIZE = 10000
 
 if child_count <= THRESHOLD
   child_docs = child_coll.find({child_key => {'$exists' => true}}).to_a
@@ -75,22 +89,12 @@ if child_count <= THRESHOLD
   puts "info: child #{child_name.inspect} group count:#{child_groups.count}"
   ids = child_groups.collect{|group| group.first}
   parent_docs = parent_coll.find({'_id' => {'$in' => ids}}).to_a
-  hash_parent_docs = hash_by_key(parent_docs, '_id')
-  count = 0
-  bulk = parent_coll.initialize_unordered_bulk_op
-  child_groups.each do |group|
-    key = group.first
-    doc = hash_parent_docs[key] # nil check(?)
-    doc[parent_key] = group.last # nil[] will fail
-    bulk.find({'_id' => key}).replace_one(doc)
-    count += 1
-  end
-  bulk.execute if count > 0
+  parent_docs_hash = hash_by_key(parent_docs, '_id')
+  bulk_merge(parent_docs_hash, parent_key, child_groups, parent_coll)
 else
-  print "info: progress - "
+  puts "info: ******** over #{THRESHOLD} threshold ********"
+  print "info: progress: "
   parent_coll.find.each_slice(SLICE_SIZE) do |parent_docs|
-    bulk = parent_coll.initialize_unordered_bulk_op
-    count = 0
     ids = parent_docs.collect{|doc| doc['_id']}
     child_docs = child_coll.find({child_key => {'$in' => ids}}).to_a
     next if child_docs.empty?
@@ -99,16 +103,9 @@ else
     #puts "debug: child #{child_name.inspect} slice doc count:#{child_docs_by_key.count}"
     child_groups = ordered_group_by_first(child_docs_by_key)
     #puts "debug: child #{child_name.inspect} slice group count:#{child_groups.count}"
-    print child_groups.count
-    hash_parent_docs = hash_by_key(parent_docs, '_id')
-    child_groups.each do |group|
-      key = group.first
-      doc = hash_parent_docs[key] # nil check(?)
-      doc[parent_key] = group.last # nil[] will fail
-      bulk.find({'_id' => key}).replace_one(doc)
-      count += 1
-    end
-    bulk.execute if count > 0
+    parent_docs_hash = hash_by_key(parent_docs, '_id')
+    count = bulk_merge(parent_docs_hash, parent_key, child_groups, parent_coll)
+    print count
     putc('.')
   end
   puts

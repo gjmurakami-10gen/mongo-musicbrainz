@@ -110,6 +110,7 @@ task :merge_1_1 do
       ['label.type', 'label_type._id'],
       ['label_alias.type', 'label_alias_type._id'],
       ['medium.format', 'medium_format._id'],
+      ['medium_cdtoc.cdtoc', 'cdtoc._id'],
       ['place.type', 'place_type._id'],
       ['place_alias.type', 'place_alias_type._id'],
       ['release.language', 'language._id'],

@@ -25,6 +25,23 @@ def hash_by_key(a, key)
   Hash[*a.collect{|e| [e[key], e]}.flatten(1)]
 end
 
+def bulk_merge(parent_docs, parent_key, child_docs_hash, parent_coll)
+  count = 0
+  bulk = parent_coll.initialize_unordered_bulk_op
+  parent_docs.each do |doc|
+    fk = doc[parent_key]
+    next unless fk
+    child_doc = child_docs_hash[fk]
+    #abort("warning: #{$0} #{ARGV.join(' ')} - already applied - fk:#{fk.inspect} - exit") unless child_doc
+    next unless child_doc
+    doc[parent_key] = child_doc
+    bulk.find({'_id' => doc['_id']}).replace_one(doc)
+    count += 1
+  end
+  bulk.execute if count > 0
+  count
+end
+
 BASE_DIR = File.expand_path('../..', __FILE__)
 FULLEXPORT_DIR = "#{BASE_DIR}/ftp.musicbrainz.org/pub/musicbrainz/data/fullexport"
 LATEST = "#{FULLEXPORT_DIR}/LATEST"
@@ -53,26 +70,27 @@ child_count = child_coll.count
 puts "info: child #{child_name.inspect} count: #{child_count}"
 
 THRESHOLD = 10000
-puts "info: ******** over #{THRESHOLD} threshold ********" if child_count > THRESHOLD
+SLICE_SIZE = 10000
 
-docs = child_coll.find.to_a
-child_hash = hash_by_key(docs, child_key)
-#p child_hash
-
-SLICE_SIZE = 1000
-
-parent_coll.find.each_slice(SLICE_SIZE) do |doc_slice|
-  bulk = parent_coll.initialize_unordered_bulk_op
-  count = 0
-  doc_slice.each do |doc|
-    fk = doc[parent_key]
-    next unless fk
-    child_doc = child_hash[fk]
-    abort("warning: #{$0} #{ARGV.join(' ')} - already applied - fk:#{fk.inspect}"- exit) unless child_doc
-    next unless child_doc
-    doc[parent_key] = child_doc if child_doc
-    bulk.find({'_id' => doc['_id']}).replace_one(doc)
-    count += 1
+if child_count <= THRESHOLD
+  child_docs = child_coll.find({child_key => {'$exists' => true}}).to_a
+  puts "info: child #{child_name.inspect} find key #{child_key.inspect} doc count:#{child_docs.count}"
+  abort("warning: no child docs found with key #{child_key.inspect} - exit") if child_docs.empty?
+  child_docs_hash = hash_by_key(child_docs, child_key)
+  parent_coll.find.each_slice(SLICE_SIZE) do |parent_docs|
+    bulk_merge(parent_docs, parent_key, child_docs_hash, parent_coll)
   end
-  bulk.execute if count > 0
+else
+  puts "info: ******** over #{THRESHOLD} threshold ********"
+  print "info: progress: "
+  parent_coll.find.each_slice(SLICE_SIZE) do |parent_docs|
+    ids = parent_docs.collect{|doc| doc[parent_key]}
+    child_docs = child_coll.find({child_key => {'$in' => ids}}).to_a
+    next if child_docs.empty?
+    child_docs_hash = hash_by_key(child_docs, child_key)
+    count = bulk_merge(parent_docs, parent_key, child_docs_hash, parent_coll)
+    print count
+    putc('.')
+  end
+  puts
 end

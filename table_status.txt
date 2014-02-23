@@ -1,14 +1,14 @@
 area
     1_n: area_alias
     1_1: area_alias_type
-area_gid_redirect
+    area_gid_redirect
     1_1: area_type
 artist
     1_n: artist_alias
     1_1: artist_alias_type
 artist_credit
 artist_credit_name
-artist_gid_redirect
+    artist_gid_redirect
     1_n: artist_ipi
     1_n: artist_isni
     1_1: artist_type
@@ -20,81 +20,81 @@ cdtoc
     1_n: iso_3166_3
     1_n: isrc
     1_n: iswc
-l_area_area
-l_area_artist
-l_area_label
-l_area_place
-l_area_recording
-l_area_release
-l_area_release_group
-l_area_url
-l_area_work
-l_artist_artist
-l_artist_label
-l_artist_place
-l_artist_recording
-l_artist_release
-l_artist_release_group
-l_artist_url
-l_artist_work
-l_label_label
-l_label_place
-l_label_recording
-l_label_release
-l_label_release_group
-l_label_url
-l_label_work
-l_place_place
-l_place_recording
-l_place_release
-l_place_release_group
-l_place_url
-l_place_work
-l_recording_recording
-l_recording_release
-l_recording_release_group
-l_recording_url
-l_recording_work
-l_release_group_release_group
-l_release_group_url
-l_release_group_work
-l_release_release
-l_release_release_group
-l_release_url
-l_release_work
-l_url_url
-l_url_work
-l_work_work
+    l_area_area
+    l_area_artist
+    l_area_label
+    l_area_place
+    l_area_recording
+    l_area_release
+    l_area_release_group
+    l_area_url
+    l_area_work
+    l_artist_artist
+    l_artist_label
+    l_artist_place
+    l_artist_recording
+    l_artist_release
+    l_artist_release_group
+    l_artist_url
+    l_artist_work
+    l_label_label
+    l_label_place
+    l_label_recording
+    l_label_release
+    l_label_release_group
+    l_label_url
+    l_label_work
+    l_place_place
+    l_place_recording
+    l_place_release
+    l_place_release_group
+    l_place_url
+    l_place_work
+    l_recording_recording
+    l_recording_release
+    l_recording_release_group
+    l_recording_url
+    l_recording_work
+    l_release_group_release_group
+    l_release_group_url
+    l_release_group_work
+    l_release_release
+    l_release_release_group
+    l_release_url
+    l_release_work
+    l_url_url
+    l_url_work
+    l_work_work
 label
     1_n: label_alias
     1_1: label_alias_type
-label_gid_redirect
+    label_gid_redirect
     1_n: label_ipi
     1_n: label_isni
     1_1: label_type
     1_1: language
-link
-link_attribute
-link_attribute_credit
-link_attribute_type
-link_creditable_attribute_type
-link_type
-link_type_attribute_type
+    link
+    link_attribute
+    link_attribute_credit
+    link_attribute_type
+    link_creditable_attribute_type
+    link_type
+    link_type_attribute_type
 medium
-medium_cdtoc
+    1_1: medium_cdtoc
     1_1: medium_format
 place
     1_n: place_alias
     1_1: place_alias_type
-place_gid_redirect
+    place_gid_redirect
     1_1: place_type
 recording
-recording_gid_redirect
+    recording_gid_redirect
 release
     1_n: release_country
-release_gid_redirect
+    release_gid_redirect
 release_group
-release_group_gid_redirect
+    release_group_gid_redirect
     1_1: release_group_primary_type
     1_1: release_group_secondary_type
     1_n: release_group_secondary_type_join
@@ -106,14 +106,14 @@ replication_control
     1_1: script
 script_language
 track
-track_gid_redirect
+    track_gid_redirect
 url
-url_gid_redirect
+    url_gid_redirect
 work
     1_n: work_alias
     1_1: work_alias_type
     1_n: work_attribute
     1_1: work_attribute_type
     1_1: work_attribute_type_allowed_value
-work_gid_redirect
+    work_gid_redirect
     1_1: work_type
