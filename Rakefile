@@ -116,10 +116,12 @@ task :merge_1_1 do
       ['release.packaging', 'release_packaging._id'],
       ['release.script', 'script._id'],
       ['release.status', 'release_status._id'],
+      ['release_country.country', 'country_area.area'],
       ['release_group.type', 'release_group_primary_type._id'],
       ['release_group_secondary_type_join.secondary_type', 'release_group_secondary_type._id'],
       ['script_language.language', 'language._id'],
       ['script_language.script', 'script._id'],
+      ['work.language', 'language._id'],
       ['work.type', 'work_type._id'],
       ['work_alias.type', 'work_alias_type._id'],
       ['work_attribute_type_allowed_value.work_attribute_type', 'work_attribute_type._id'], # must be before next
@@ -133,7 +135,24 @@ end
 desc "merge_1_n"
 task :merge_1_n do
   [
-      ['artist.alias', 'artist_alias.artist']
+      ['area.alias', 'area_alias.area'],
+      ['area.iso_3166_1', 'iso_3166_1.area'],
+      ['area.iso_3166_2', 'iso_3166_2.area'],
+      ['area.iso_3166_3', 'iso_3166_3.area'],
+      ['artist.alias', 'artist_alias.artist'],
+      ['artist.ipi', 'artist_ipi.artist'],
+      ['artist.isni', 'artist_isni.artist'],
+      ['label.alias', 'label_alias.label'],
+      ['label.ipi', 'label_ipi.label'],
+      ['label.isni', 'label_isni.label'],
+      ['recording.isrc', 'isrc.recording'],
+      ['place.alias', 'place_alias.place'],
+      ['release.country', 'release_country.release'],
+      ['release.unknown_country', 'release_unknown_country.release'],
+      ['release_group.secondary_type', 'release_group_secondary_type_join.release_group'],
+      ['work.alias', 'work_alias.work'],
+      ['work.attribute', 'work_attribute.work'],
+      ['work.iswc', 'iswc.work']
   ].each do |parent, child|
     sh "time ./script/merge_1_n.rb #{parent} #{child} || true"
   end
