@@ -42,29 +42,35 @@ parent_arg = ARGV[0].split('.', -1)
 child_arg = ARGV[1].split('.', -1)
 abort(USAGE) if parent_arg.size != 2 || child_arg.size != 2
 
-coll_name, coll_key = child_arg
-coll = $db[coll_name]
-docs = coll.find.to_a
-puts "#{coll_name} count: #{docs.count}"
-child_hash = hash_by_key(docs, coll_key)
+parent_name, parent_key = parent_arg
+parent_coll = $db[parent_name]
+parent_count = parent_coll.count
+puts "info: parent #{parent_name.inspect} count: #{parent_count}"
+
+child_name, child_key = child_arg
+child_coll = $db[child_name]
+child_count = child_coll.count
+puts "info: child #{child_name.inspect} count: #{child_count}"
+
+THRESHOLD = 10000
+puts "info: ******** over #{THRESHOLD} threshold ********" if child_count > THRESHOLD
+
+docs = child_coll.find.to_a
+child_hash = hash_by_key(docs, child_key)
 #p child_hash
 
 SLICE_SIZE = 1000
 
-coll_name, coll_key = parent_arg
-coll = $db[coll_name]
-puts "#{coll_name} count: #{coll.count}"
-coll.find.each_slice(SLICE_SIZE) do |doc_slice|
-  bulk = coll.initialize_unordered_bulk_op
+parent_coll.find.each_slice(SLICE_SIZE) do |doc_slice|
+  bulk = parent_coll.initialize_unordered_bulk_op
   count = 0
   doc_slice.each do |doc|
-    fk = doc[coll_key]
+    fk = doc[parent_key]
     next unless fk
     child_doc = child_hash[fk]
-    abort("exit: #{$0} #{ARGV.join(' ')} - already applied - fk:#{fk.inspect}") unless child_doc
-    #puts("warning: #{$0} #{ARGV.join(' ')} - already applied - fk:#{fk.inspect}") unless child_doc
+    abort("warning: #{$0} #{ARGV.join(' ')} - already applied - fk:#{fk.inspect}"- exit) unless child_doc
     next unless child_doc
-    doc[coll_key] = child_doc if child_doc
+    doc[parent_key] = child_doc if child_doc
     bulk.find({'_id' => doc['_id']}).replace_one(doc)
     count += 1
   end
