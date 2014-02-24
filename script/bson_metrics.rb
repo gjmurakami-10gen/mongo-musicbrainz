@@ -16,6 +16,8 @@
 gem "bson", "~> 2.2.1"
 require 'bson'
 require 'benchmark'
+require 'json'
+require 'pp'
 
 # usage: bson_metrics.rb [file.bson]
 
@@ -47,14 +49,14 @@ type_counts = BSON::Registry::MAPPINGS.collect{|byte, klass| [klass, hist[byte.o
 type_counts = type_counts.select{|elem| elem[1] > 0}
 type_counts = type_counts.sort{|a,b| b[1] <=> a[1]}
 
-puts <<-EOT.gsub(/^\s+/, '')
-  seconds: #{'%.1f' % bm.real}
-  docs/sec: #{(doc_count.to_f/bm.real).round}
-  docs: #{doc_count}
-  elements: #{element_count}
-  embeds: #{embed_count} (sub-docs+sub-arrays)
-  elements/doc: #{'%.1f' % (element_count.to_f / doc_count.to_f)}
-  denorm: #{'%.1f' % (embed_count.to_f / doc_count.to_f)} (embeds/doc)
-  degree: #{'%.1f' % (element_count.to_f / (doc_count + embed_count).to_f)}
-EOT
-puts type_counts.collect{|klass, count| "#{klass}: #{(100.0*count.to_f/element_count.to_f).round}%"}.join("\n")
+puts JSON.pretty_generate({
+  seconds: bm.real.round,
+  docs_per_sec: (doc_count.to_f/bm.real).round,
+  docs: doc_count,
+  elements: element_count,
+  elements_per_doc: (element_count.to_f / doc_count.to_f).round,
+  embeds: embed_count,
+  embeds_per_doc: (embed_count.to_f / doc_count.to_f).round,
+  degree: (element_count.to_f / (doc_count + embed_count).to_f).round,
+  percent_by_type: Hash[*type_counts.collect{|klass, count| [klass, (100.0*count.to_f/element_count.to_f).round]}.flatten(1)]
+})
