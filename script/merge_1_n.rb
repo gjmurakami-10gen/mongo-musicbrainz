@@ -93,6 +93,7 @@ if child_count <= THRESHOLD
   bulk_merge(parent_docs_hash, parent_key, child_groups, parent_coll)
 else
   puts "info: ******** over #{THRESHOLD} threshold ********"
+  child_coll.ensure_index(child_key => Mongo::ASCENDING)
   print "info: progress: "
   parent_coll.find.each_slice(SLICE_SIZE) do |parent_docs|
     ids = parent_docs.collect{|doc| doc['_id']}

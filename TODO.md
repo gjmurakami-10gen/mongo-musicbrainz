@@ -2,18 +2,15 @@
 
 * denormalization - start with manual
   * at start - 119 tables + 2 enum types
-  * one-to-one
-    * large merge
-      ['medium_cdtoc.cdtoc', 'cdtoc._id']
-  * one-to-many
-    * THRESHOLD to fetch all
+  * merge order - topological sort
+  * 1_1
+  * 1_n
+    *
   * many-to-many (join tables)
     * artist_credit
     * artist_credit_name
     * release_country
     * release_label
-    * track
-    * medium
 * '_id' for gid and guid
 * PK indexes
 * references DAG

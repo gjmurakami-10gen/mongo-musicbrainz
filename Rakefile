@@ -66,6 +66,10 @@ task :unarchive => LATEST_FILE do
   sh "tar -xf '#{mbdump_tar}'"
 end
 
+file "table_count.txt" do |file|
+  sh "(cd #{DATA_LATEST_DIR}/mbdump && wc -l *) | sort -nr > #{file.name}"
+end
+
 $CreateTables_sql = "musicbrainz-server/admin/sql/CreateTables.sql"
 $CreateTables_sql = 'schema/CreateTables.sql'
 
@@ -146,7 +150,9 @@ task :merge_1_n do
       ['label.alias', 'label_alias.label'],
       ['label.ipi', 'label_ipi.label'],
       ['label.isni', 'label_isni.label'],
+      ['medium.cdtoc', 'medium_cdtoc.medium'],
       ['recording.isrc', 'isrc.recording'],
+      ['recording.track', 'track.recording'],
       ['place.alias', 'place_alias.place'],
       ['release.country', 'release_country.release'],
       ['release.unknown_country', 'release_unknown_country.release'],

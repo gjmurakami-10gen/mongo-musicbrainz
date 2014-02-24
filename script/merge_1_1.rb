@@ -32,7 +32,7 @@ def bulk_merge(parent_docs, parent_key, child_docs_hash, parent_coll)
     fk = doc[parent_key]
     next unless fk
     child_doc = child_docs_hash[fk]
-    #abort("warning: #{$0} #{ARGV.join(' ')} - already applied - fk:#{fk.inspect} - exit") unless child_doc
+    abort("warning: #{$0} #{ARGV.join(' ')} - already applied - fk:#{fk.inspect} - exit") unless child_doc
     next unless child_doc
     doc[parent_key] = child_doc
     bulk.find({'_id' => doc['_id']}).replace_one(doc)

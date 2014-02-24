@@ -12,7 +12,7 @@ artist_credit_name
     1_n: artist_ipi
     1_n: artist_isni
     1_1: artist_type
-cdtoc
+    1_1: cdtoc
     1_1: country_area
     1_1: gender
     1_n: iso_3166_1
@@ -81,7 +81,7 @@ label
     link_type
     link_type_attribute_type
 medium
-    1_1: medium_cdtoc
+    1_n: medium_cdtoc
     1_1: medium_format
 place
     1_n: place_alias
@@ -105,7 +105,7 @@ release_label
 replication_control
     1_1: script
 script_language
-track
+    1_n: track
     track_gid_redirect
 url
     url_gid_redirect
