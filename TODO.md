@@ -2,10 +2,13 @@
 
 * denormalization - start with manual
   * at start - 119 tables + 2 enum types
+  * name
+    * merge - pro: not overloaded, con: non-descript
+    * denormalize - pro: common use include modifying, con: long
+    * join - pro: common use, con: non-modifying
   * merge order - topological sort
   * 1_1
   * 1_n
-    *
   * many-to-many (join tables)
     * artist_credit
     * artist_credit_name
@@ -15,6 +18,11 @@
 * PK indexes
 * references DAG
 
+* tools
+  * generalize, unify, undo in Ruby
+  * port to mongo-c-driver, mongo-cxx-driver, mongo-cpp-driver
+  * bson-metrics
+    * expand to mongometrics when Ruby 3.0 driver is functional
 * MD5SUM check
 * load dependency
 
