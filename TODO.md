@@ -14,6 +14,8 @@
     * artist_credit_name
     * release_country
     * release_label
+  * Advanced Relationships (AR)
+    * [description](http://musicbrainz.org/doc/Next_Generation_Schema/Advanced_Relationships_Table_Structure)
 * '_id' for gid and guid
 * PK indexes
 * references DAG
@@ -29,7 +31,8 @@
 * CASCADE (?)
 
 * bson-ruby examples
-  * bsondump.rb
+  * bson_metrics
+  * bsondump
 * mongo-ruby-driver examples
   * mongodump
 
