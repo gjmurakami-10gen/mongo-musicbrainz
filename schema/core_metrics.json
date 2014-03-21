@@ -1,0 +1,178 @@
+[
+{
+  "collection": "area",
+  "seconds": 17,
+  "docs_per_sec": 5309,
+  "docs": 87908,
+  "elements": 1837523,
+  "elements_per_doc": 21,
+  "aggregates": 238926,
+  "aggregates_per_doc": 3,
+  "degree": 6,
+  "key_size_average": 7,
+  "string_size_average": 11,
+  "percent_by_type": {
+    "String": 38,
+    "BSON::Int32": 29,
+    "BSON::Boolean": 12,
+    "Hash": 11,
+    "Time": 8,
+    "Array": 2,
+    "BSON::ObjectId": 0
+  }
+},
+{
+  "collection": "artist",
+  "seconds": 149,
+  "docs_per_sec": 5494,
+  "docs": 819407,
+  "elements": 17793087,
+  "elements_per_doc": 22,
+  "aggregates": 2089177,
+  "aggregates_per_doc": 3,
+  "degree": 6,
+  "key_size_average": 8,
+  "string_size_average": 13,
+  "percent_by_type": {
+    "BSON::Int32": 39,
+    "String": 33,
+    "Hash": 8,
+    "BSON::ObjectId": 6,
+    "BSON::Boolean": 6,
+    "Time": 4,
+    "Array": 4
+  }
+},
+{
+  "collection": "label",
+  "seconds": 8,
+  "docs_per_sec": 9618,
+  "docs": 78167,
+  "elements": 889543,
+  "elements_per_doc": 11,
+  "aggregates": 54986,
+  "aggregates_per_doc": 1,
+  "degree": 7,
+  "key_size_average": 7,
+  "string_size_average": 17,
+  "percent_by_type": {
+    "String": 41,
+    "BSON::Int32": 33,
+    "BSON::Boolean": 11,
+    "Time": 8,
+    "Hash": 5,
+    "Array": 1,
+    "BSON::ObjectId": 0
+  }
+},
+{
+  "collection": "place",
+  "seconds": 1,
+  "docs_per_sec": 5591,
+  "docs": 3053,
+  "elements": 60130,
+  "elements_per_doc": 20,
+  "aggregates": 7866,
+  "aggregates_per_doc": 3,
+  "degree": 6,
+  "key_size_average": 7,
+  "string_size_average": 16,
+  "percent_by_type": {
+    "String": 32,
+    "BSON::Int32": 32,
+    "BSON::Boolean": 9,
+    "Hash": 9,
+    "Time": 7,
+    "Float": 7,
+    "Array": 5,
+    "BSON::ObjectId": 0
+  }
+},
+{
+  "collection": "recording",
+  "seconds": 2832,
+  "docs_per_sec": 4626,
+  "docs": 13102579,
+  "elements": 322644891,
+  "elements_per_doc": 25,
+  "aggregates": 32129859,
+  "aggregates_per_doc": 2,
+  "degree": 7,
+  "key_size_average": 7,
+  "string_size_average": 19,
+  "percent_by_type": {
+    "BSON::Int32": 51,
+    "String": 27,
+    "Time": 7,
+    "Hash": 6,
+    "Array": 4,
+    "BSON::Boolean": 4,
+    "BSON::ObjectId": 0
+  }
+},
+{
+  "collection": "release",
+  "seconds": 291,
+  "docs_per_sec": 4265,
+  "docs": 1241852,
+  "elements": 34541481,
+  "elements_per_doc": 28,
+  "aggregates": 5767172,
+  "aggregates_per_doc": 5,
+  "degree": 5,
+  "key_size_average": 7,
+  "string_size_average": 13,
+  "percent_by_type": {
+    "BSON::Int32": 50,
+    "String": 21,
+    "Hash": 11,
+    "BSON::ObjectId": 6,
+    "Time": 6,
+    "Array": 6
+  }
+},
+{
+  "collection": "release_group",
+  "seconds": 106,
+  "docs_per_sec": 9664,
+  "docs": 1020270,
+  "elements": 11045844,
+  "elements_per_doc": 11,
+  "aggregates": 1062513,
+  "aggregates_per_doc": 1,
+  "degree": 5,
+  "key_size_average": 7,
+  "string_size_average": 18,
+  "percent_by_type": {
+    "BSON::Int32": 42,
+    "String": 32,
+    "Time": 13,
+    "Hash": 6,
+    "BSON::ObjectId": 3,
+    "Array": 3
+  }
+},
+{
+  "collection": "work",
+  "seconds": 50,
+  "docs_per_sec": 9219,
+  "docs": 457407,
+  "elements": 5328082,
+  "elements_per_doc": 12,
+  "aggregates": 489050,
+  "aggregates_per_doc": 1,
+  "degree": 6,
+  "key_size_average": 7,
+  "string_size_average": 18,
+  "percent_by_type": {
+    "String": 40,
+    "BSON::Int32": 35,
+    "Time": 11,
+    "Hash": 7,
+    "BSON::Boolean": 2,
+    "Array": 2,
+    "BSON::ObjectId": 2
+  }
+}
+]
+

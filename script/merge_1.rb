@@ -29,10 +29,12 @@ def bulk_merge(parent_docs, parent_key, child_docs_hash, parent_coll)
   count = 0
   bulk = parent_coll.initialize_unordered_bulk_op
   parent_docs.each do |doc|
-    fk = doc[parent_key]
+    val = doc[parent_key]
     next unless fk
+    fk = val.is_a?(Hash) ? val["_id"] : val
+    abort("warning: #{$0} #{ARGV.join(' ')} - line:#{__LINE__} - expected _id to reapply merge - val:#{val.inspect} - exit") unless fk
     child_doc = child_docs_hash[fk]
-    abort("warning: #{$0} #{ARGV.join(' ')} - already applied - fk:#{fk.inspect} - exit") unless child_doc
+    abort("warning: #{$0} #{ARGV.join(' ')} - line:#{__LINE__} - unexpected fk:#{fk.inspect} - exit") unless child_doc
     next unless child_doc
     doc[parent_key] = child_doc
     bulk.find({'_id' => doc['_id']}).replace_one(doc)

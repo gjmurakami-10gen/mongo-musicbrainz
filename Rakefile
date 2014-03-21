@@ -95,12 +95,12 @@ end
 desc "load_tables"
 task :load_tables => 'schema/create_tables.json' do
   table_names = Dir["data/fullexport/#{file_to_s(LATEST_FILE)}/mbdump/*"].collect{|file_name| File.basename(file_name) }
-  sh "time ./script/mbdump_to_mongo.rb #{table_names.join(' ')}"
+  sh "MONGODB_URI='#{MONGODB_URI}' time ./script/mbdump_to_mongo.rb #{table_names.join(' ')}"
 end
 
 desc "merge_enums"
 task :merge_enums => 'schema/create_tables.json' do
-  sh "time ./script/merge_enum_types.rb"
+  sh "MONGODB_URI='#{MONGODB_URI}' time ./script/merge_enum_types.rb"
 end
 
 desc "merge_1"
@@ -145,7 +145,7 @@ task :merge_1 do
       ['track.url', 'url.gid'],
       ['work.url', 'url.gid']
   ].each do |parent, child|
-    sh "time ./script/merge_1.rb #{parent} #{child} || true"
+    sh "MONGODB_URI='#{MONGODB_URI}' time ./script/merge_1.rb #{parent} #{child} || true"
   end
 end
 
@@ -186,7 +186,7 @@ task :merge_n do
       ['url.gid_redirect', 'url_gid_redirect.new_id'],
       ['work.gid_redirect', 'work_gid_redirect.new_id']
   ].each do |parent, child|
-    sh "time ./script/merge_n.rb #{parent} #{child} || true"
+    sh "MONGODB_URI='#{MONGODB_URI}' time ./script/merge_n.rb #{parent} #{child} || true"
   end
 end
 
@@ -230,6 +230,24 @@ task :references => 'schema/create_tables.json' do
           puts "#{table_name}.#{column_name} references #{reference}"
         end
       end
+    end
+  end
+end
+
+CORE_ENTITIES = %w(area artist label place recording release release_group url work)
+
+namespace :metrics do
+  task :wc do
+    sh "cd #{DATA_LATEST_DIR}/mbdump && wc -l #{CORE_ENTITIES.join(' ')} | sort -nr"
+  end
+  task :dump do
+    CORE_ENTITIES.each do |entity|
+      sh "mongodump --port #{MONGOD_PORT} -d #{MONGO_DBNAME} -c #{entity}"
+    end
+  end
+  task :bson do
+    CORE_ENTITIES.each do |entity|
+      sh "script/bson_metrics.rb dump/#{MONGO_DBNAME}/#{entity}.bson"
     end
   end
 end
