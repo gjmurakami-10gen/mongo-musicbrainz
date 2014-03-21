@@ -103,14 +103,15 @@ task :merge_enums => 'schema/create_tables.json' do
   sh "time ./script/merge_enum_types.rb"
 end
 
-desc "merge_1_1"
-task :merge_1_1 do
+desc "merge_1"
+task :merge_1 do
   [
       ['area.type', 'area_type._id'],
       ['area_alias.type', 'area_alias_type._id'],
       ['artist.type', 'artist_type._id'],
       ['artist.gender', 'gender._id'],
       ['artist_alias.type', 'artist_alias_type._id'],
+      ['artist_credit_name.artist_credit', 'artist_credit_._id'],
       ['label.type', 'label_type._id'],
       ['label_alias.type', 'label_alias_type._id'],
       ['medium.format', 'medium_format._id'],
@@ -126,25 +127,37 @@ task :merge_1_1 do
       ['release_group_secondary_type_join.secondary_type', 'release_group_secondary_type._id'],
       ['script_language.language', 'language._id'],
       ['script_language.script', 'script._id'],
+      ['track.medium', 'medium._id'],
       ['work.language', 'language._id'],
       ['work.type', 'work_type._id'],
       ['work_alias.type', 'work_alias_type._id'],
       ['work_attribute_type_allowed_value.work_attribute_type', 'work_attribute_type._id'], # must be before next
       ['work_attribute.work_attribute_type', 'work_attribute_type._id'],
-      ['work_attribute.work_attribute_type_allowed_value', 'work_attribute_type_allowed_value._id']
+      ['work_attribute.work_attribute_type_allowed_value', 'work_attribute_type_allowed_value._id'],
+      # url by gid
+      ['area.url', 'url.gid'],
+      ['artist.url', 'url.gid'],
+      ['label.url', 'url.gid'],
+      ['place.url', 'url.gid'],
+      ['recording.url', 'url.gid'],
+      ['release.url', 'url.gid'],
+      ['release_group.url', 'url.gid'],
+      ['track.url', 'url.gid'],
+      ['work.url', 'url.gid']
   ].each do |parent, child|
-    sh "time ./script/merge_1_1.rb #{parent} #{child} || true"
+    sh "time ./script/merge_1.rb #{parent} #{child} || true"
   end
 end
 
-desc "merge_1_n"
-task :merge_1_n do
+desc "merge_n"
+task :merge_n do
   [
       ['area.alias', 'area_alias.area'],
       ['area.iso_3166_1', 'iso_3166_1.area'],
       ['area.iso_3166_2', 'iso_3166_2.area'],
       ['area.iso_3166_3', 'iso_3166_3.area'],
       ['artist.alias', 'artist_alias.artist'],
+      ['artist.artist_credit_name', 'artist_credit_name.artist'],
       ['artist.ipi', 'artist_ipi.artist'],
       ['artist.isni', 'artist_isni.artist'],
       ['label.alias', 'label_alias.label'],
@@ -155,13 +168,25 @@ task :merge_1_n do
       ['recording.track', 'track.recording'],
       ['place.alias', 'place_alias.place'],
       ['release.country', 'release_country.release'],
+      ['release.label', 'release_label.release'],
       ['release.unknown_country', 'release_unknown_country.release'],
       ['release_group.secondary_type', 'release_group_secondary_type_join.release_group'],
       ['work.alias', 'work_alias.work'],
       ['work.attribute', 'work_attribute.work'],
-      ['work.iswc', 'iswc.work']
+      ['work.iswc', 'iswc.work'],
+      # gid_redirect by new_id
+      ['area.gid_redirect', 'area_gid_redirect.new_id'],
+      ['artist.gid_redirect', 'artist_gid_redirect.new_id'],
+      ['label.gid_redirect', 'label_gid_redirect.new_id'],
+      ['place.gid_redirect', 'place_gid_redirect.new_id'],
+      ['recording.gid_redirect', 'recording_gid_redirect.new_id'],
+      ['release.gid_redirect', 'release_gid_redirect.new_id'],
+      ['release_group.gid_redirect', 'release_group_gid_redirect.new_id'],
+      ['track.gid_redirect', 'track_gid_redirect.new_id'],
+      ['url.gid_redirect', 'url_gid_redirect.new_id'],
+      ['work.gid_redirect', 'work_gid_redirect.new_id']
   ].each do |parent, child|
-    sh "time ./script/merge_1_n.rb #{parent} #{child} || true"
+    sh "time ./script/merge_n.rb #{parent} #{child} || true"
   end
 end
 

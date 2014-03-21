@@ -6,8 +6,8 @@ area
 artist
     1_n: artist_alias
     1_1: artist_alias_type
-artist_credit
-artist_credit_name
+    1_n: artist_credit_name
+        1_1: artist_credit
     artist_gid_redirect
     1_n: artist_ipi
     1_n: artist_isni
@@ -20,6 +20,7 @@ artist_credit_name
     1_n: iso_3166_3
     1_n: isrc
     1_n: iswc
+AR
     l_area_area
     l_area_artist
     l_area_label
@@ -80,9 +81,6 @@ label
     link_creditable_attribute_type
     link_type
     link_type_attribute_type
-medium
-    1_n: medium_cdtoc
-    1_1: medium_format
 place
     1_n: place_alias
     1_1: place_alias_type
@@ -90,23 +88,26 @@ place
     1_1: place_type
 recording
     recording_gid_redirect
+    1_n: track
+        medium
+            1_n: medium_cdtoc
+            1_1: medium_format
+        track_gid_redirect
 release
     1_n: release_country
     release_gid_redirect
+    1_n: release_label --> release
+        1_1: release_packaging
+        1_1: release_status
+        1_n: release_unknown_country
 release_group
     release_group_gid_redirect
     1_1: release_group_primary_type
     1_1: release_group_secondary_type
     1_n: release_group_secondary_type_join
-release_label
-    1_1: release_packaging
-    1_1: release_status
-    1_n: release_unknown_country
-replication_control
+!replication_control
     1_1: script
-script_language
-    1_n: track
-    track_gid_redirect
+?script_language
 url
     url_gid_redirect
 work
