@@ -25,14 +25,14 @@ def hash_by_key(a, key)
   Hash[*a.collect{|e| [e[key], e]}.flatten(1)]
 end
 
-def bulk_merge(parent_docs, parent_key, child_docs_hash, parent_coll)
+def bulk_merge(parent_docs, parent_key, child_docs_hash, child_key, parent_coll)
   count = 0
   bulk = parent_coll.initialize_unordered_bulk_op
   parent_docs.each do |doc|
     val = doc[parent_key]
-    next unless fk
-    fk = val.is_a?(Hash) ? val["_id"] : val
-    abort("warning: #{$0} #{ARGV.join(' ')} - line:#{__LINE__} - expected _id to reapply merge - val:#{val.inspect} - exit") unless fk
+    next unless val
+    fk = val.is_a?(Hash) ? val[child_key] : val
+    abort("warning: #{$0} #{ARGV.join(' ')} - line:#{__LINE__} - expected child key #{child_key.inspect} to reapply merge - val:#{val.inspect} - exit") unless fk
     child_doc = child_docs_hash[fk]
     abort("warning: #{$0} #{ARGV.join(' ')} - line:#{__LINE__} - unexpected fk:#{fk.inspect} - exit") unless child_doc
     next unless child_doc
@@ -76,11 +76,11 @@ SLICE_SIZE = 10000
 
 if child_count <= THRESHOLD
   child_docs = child_coll.find({child_key => {'$exists' => true}}).to_a
-  puts "info: child #{child_name.inspect} find key #{child_key.inspect} doc count:#{child_docs.count}"
-  abort("warning: no child docs found with key #{child_key.inspect} - exit") if child_docs.empty?
+  puts "info: child #{child_name.inspect} key #{child_key.inspect} count:#{child_docs.count}"
+  abort("warning: no docs found for child #{child_name.inspect} key #{child_key.inspect} - exit") if child_docs.empty?
   child_docs_hash = hash_by_key(child_docs, child_key)
   parent_coll.find.each_slice(SLICE_SIZE) do |parent_docs|
-    bulk_merge(parent_docs, parent_key, child_docs_hash, parent_coll)
+    bulk_merge(parent_docs, parent_key, child_docs_hash, child_key, parent_coll)
   end
 else
   puts "info: ******** over #{THRESHOLD} threshold ********"
@@ -90,7 +90,7 @@ else
     child_docs = child_coll.find({child_key => {'$in' => ids}}).to_a
     next if child_docs.empty?
     child_docs_hash = hash_by_key(child_docs, child_key)
-    count = bulk_merge(parent_docs, parent_key, child_docs_hash, parent_coll)
+    count = bulk_merge(parent_docs, parent_key, child_docs_hash, child_key, parent_coll)
     print count
     putc('.')
   end

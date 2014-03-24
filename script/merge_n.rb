@@ -81,8 +81,8 @@ SLICE_SIZE = 10000
 
 if child_count <= THRESHOLD
   child_docs = child_coll.find({child_key => {'$exists' => true}}).to_a
-  puts "info: child #{child_name.inspect} find key #{child_key.inspect} doc count:#{child_docs.count}"
-  abort("warning: no child docs found with key #{child_key.inspect} - exit") if child_docs.empty?
+  puts "info: child #{child_name.inspect} key #{child_key.inspect} count:#{child_docs.count}"
+  abort("warning: no docs found for child:#{child_name.inspect} key:#{child_key.inspect} - exit") if child_docs.empty?
   child_docs_by_key = child_docs.collect{|doc| [doc[child_key], doc]}
   child_docs_by_key.sort!{|a,b| a.first <=> b.first}
   child_groups = ordered_group_by_first(child_docs_by_key)
