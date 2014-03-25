@@ -18,15 +18,13 @@ module BSON
 end
 
 class Hash
-  @count = 0
   @tally = 0
-  class << self; attr_reader :count, :tally; end
+  class << self; attr_reader :tally; end
   def self.from_bson(bson)
     hash = new
     bson.read(4) # Swallow the first four bytes.
     while (type = bson.readbyte.chr) != NULL_BYTE
       field = bson.gets(NULL_BYTE).from_bson_string.chop!
-      @count += 1
       @tally += field.size
       hash[field] = BSON::Registry.get(type).from_bson(bson)
     end
@@ -35,12 +33,10 @@ class Hash
 end
 
 class String
-  @count = 0
   @tally = 0
-  class << self; attr_reader :count, :tally; end
+  class << self; attr_reader :tally; end
   def self.from_bson(bson)
     s = bson.read(Int32.from_bson(bson)).from_bson_string.chop!
-    @count += 1
     @tally += s.size
     s
   end
@@ -73,7 +69,7 @@ puts JSON.pretty_generate({
   aggregates: aggregate_count,
   aggregates_per_doc: (aggregate_count.to_f / doc_count.to_f).round,
   degree: (element_count.to_f / (doc_count + aggregate_count).to_f).round,
-  key_size_average: (Hash.tally.to_f/[Hash.count,1].max.to_f).round,
-  string_size_average: (String.tally.to_f/[String.count,1].max.to_f).round,
+  key_size_average: (Hash.tally.to_f/[element_count,1].max.to_f).round,
+  string_size_average: (String.tally.to_f/[hist[BSON::String::BSON_TYPE.ord],1].max.to_f).round,
   percent_by_type: Hash[*type_counts.collect{|klass, count| [klass, (100.0*count.to_f/element_count.to_f).round]}.flatten(1)]
 })

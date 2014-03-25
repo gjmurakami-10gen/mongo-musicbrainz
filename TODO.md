@@ -1,7 +1,30 @@
 # TO DO
 
-* MusicBrainz schema notes
-  * [MusicBrainz Schema diagram](http://wiki.musicbrainz.org/-/images/5/52/ngs.png)
+* mbdump update
+  * CURRENT versus LATEST decoupling
+
+# TOOLS
+
+* generalize, unify, undo in Ruby
+  * update instead of replace
+    * individual docs
+    * sort, group, in
+  * port to mongo-c-driver, mongo-cxx-driver, mongo-cpp-driver
+* bson_metrics
+  * expand to mongometrics when Ruby 3.0 driver is functional
+  * libbson version
+* MD5SUM check
+* load dependency
+
+* bson-ruby examples
+  * bson_metrics
+  * bsondump
+* mongo-ruby-driver examples
+  * mongodump
+
+# SCHEMA NOTES
+
+* [MusicBrainz Schema diagram](http://wiki.musicbrainz.org/-/images/5/52/ngs.png)
     * color coding
       * blue - core entities (9) - area artist label place recording release release_group url work
 
@@ -18,9 +41,10 @@
 
       * yellow - mostly-static lists (21)
       * red - external identifiers (9)
-  * Advanced Relationships (AR) - l_* combinations table count (45)
+    * Advanced Relationships (AR) - l_* combinations table count (45)
     * area(9), artist(8), label(7), place(6), recording(5), release(4), release_group(3), url(2), work(1)
     * [description](http://musicbrainz.org/doc/Next_Generation_Schema/Advanced_Relationships_Table_Structure)
+
 * denormalization - start with manual
   * at start
     * 2 enum types
@@ -51,25 +75,9 @@
 * '_id' for gid and guid
 * PK indexes
 * references DAG
-
-* mbdump update
-  * CURRENT versus LATEST decoupling
-* tools
-  * generalize, unify, undo in Ruby
-  * port to mongo-c-driver, mongo-cxx-driver, mongo-cpp-driver
-  * bson_metrics
-    * expand to mongometrics when Ruby 3.0 driver is functional
-    * libbson version
-* MD5SUM check
-* load dependency
-
 * CASCADE (?)
 
-* bson-ruby examples
-  * bson_metrics
-  * bsondump
-* mongo-ruby-driver examples
-  * mongodump
+# MEASUREMENTS
 
 rake load_tables
      5302.46 real      3548.50 user        35.60 sys
