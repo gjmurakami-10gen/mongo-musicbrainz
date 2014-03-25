@@ -45,8 +45,21 @@ def path_file_to_s(*args)
   File.join(*(args[0..-2] << file_to_s(File.join(*args))))
 end
 
-task :default => [:load_tables] do
-  sh "echo Hello World!"
+task :default do
+  puts <<-EOF
+  usage:
+    rake fetch
+    rake unarchive
+    rake mongo:start
+    rake load_tables
+    rake merge_1 merge_n
+    rake metrics:wc_all
+    rake metrics:wc_core
+    rake metrics:dump
+    rake metrics:bson
+    rake references
+    rake indexes
+  EOF
 end
 
 file LATEST_FILE do |file|
@@ -66,19 +79,6 @@ task :unarchive => LATEST_FILE do
   sh "tar -xf '#{mbdump_tar}'"
 end
 
-file "table_count.txt" do |file|
-  sh "(cd #{DATA_LATEST_DIR}/mbdump && wc -l *) | sort -nr > #{file.name}"
-end
-
-$CreateTables_sql = "musicbrainz-server/admin/sql/CreateTables.sql"
-$CreateTables_sql = 'schema/CreateTables.sql'
-
-file 'schema/create_tables.json' => [ $CreateTables_sql, 'lib/parslet_sql.rb' ] do |file|
-  sql_text = IO.read($CreateTables_sql)
-  m = CreateTablesParser.new.parse(sql_text)
-  File.open(file.name, 'w') {|fio| fio.write(JSON.pretty_generate(m)) }
-end
-
 namespace :mongo do
   task :start do
     FileUtils.mkdir_p(MONGO_DBPATH) unless File.directory?(MONGO_DBPATH)
@@ -92,13 +92,22 @@ namespace :mongo do
   end
 end
 
+$CreateTables_sql = "musicbrainz-server/admin/sql/CreateTables.sql"
+$CreateTables_sql = 'schema/CreateTables.sql'
+
+file 'schema/create_tables.json' => [ $CreateTables_sql, 'lib/parslet_sql.rb' ] do |file|
+  sql_text = IO.read($CreateTables_sql)
+  m = CreateTablesParser.new.parse(sql_text)
+  File.open(file.name, 'w') {|fio| fio.write(JSON.pretty_generate(m)) }
+end
+
 desc "load_tables"
 task :load_tables => 'schema/create_tables.json' do
   table_names = Dir["data/fullexport/#{file_to_s(LATEST_FILE)}/mbdump/*"].collect{|file_name| File.basename(file_name) }
   sh "MONGODB_URI='#{MONGODB_URI}' time ./script/mbdump_to_mongo.rb #{table_names.join(' ')}"
 end
 
-desc "merge_enums"
+desc "merge_enums" # running this shows that enums from the schema are not used
 task :merge_enums => 'schema/create_tables.json' do
   sh "MONGODB_URI='#{MONGODB_URI}' time ./script/merge_enum_types.rb"
 end
@@ -190,31 +199,31 @@ task :merge_n do
   end
 end
 
+CORE_ENTITIES = %w(area artist label place recording release release_group url work)
+
+namespace :metrics do
+  task :wc_all do
+    sh "cd #{DATA_LATEST_DIR}/mbdump && wc -l * | sort -nr"
+  end
+  task :wc_core do
+    sh "cd #{DATA_LATEST_DIR}/mbdump && wc -l #{CORE_ENTITIES.join(' ')} | sort -nr"
+  end
+  task :dump do
+    CORE_ENTITIES.each do |entity|
+      sh "mongodump --port #{MONGOD_PORT} -d #{MONGO_DBNAME} -c #{entity}"
+    end
+  end
+  task :bson do
+    CORE_ENTITIES.each do |entity|
+      sh "script/bson_metrics.rb dump/#{MONGO_DBNAME}/#{entity}.bson"
+    end
+  end
+end
+
 # PK - Primary Key index hint
 # references table.column - relation in comment
 
-task :indexes => 'schema/create_tables.json' do
-  client = Mongo::MongoClient.from_uri(MONGODB_URI)
-  db = $client[MONGO_DBNAME]
-  JSON.parse(IO.read('schema/create_tables.json')).each do |sql|
-    if sql.has_key?('create_table')
-      create_table = sql['create_table']
-      table_name = create_table['table_name']
-      columns = create_table['columns']
-      columns.each do |column|
-        column_name = column['column_name']
-        comment = column['comment']
-        if comment =~ /PK/
-          puts "table_name:#{table_name} column_name:#{column_name} comment:#{comment.inspect}"
-          #collection = db[table_name]
-          #collection.ensure_index(column_name => Mongo::ASCENDING)
-        end
-      end
-    end
-  end
-  client.close
-end
-
+desc "print references from schema"
 task :references => 'schema/create_tables.json' do
   JSON.parse(IO.read('schema/create_tables.json')).each do |sql|
     if sql.has_key?('create_table')
@@ -234,20 +243,27 @@ task :references => 'schema/create_tables.json' do
   end
 end
 
-CORE_ENTITIES = %w(area artist label place recording release release_group url work)
-
-namespace :metrics do
-  task :wc do
-    sh "cd #{DATA_LATEST_DIR}/mbdump && wc -l #{CORE_ENTITIES.join(' ')} | sort -nr"
-  end
-  task :dump do
-    CORE_ENTITIES.each do |entity|
-      sh "mongodump --port #{MONGOD_PORT} -d #{MONGO_DBNAME} -c #{entity}"
+desc "print indexes from schema - does not ensure indexes yet"
+task :indexes => 'schema/create_tables.json' do
+  client = Mongo::MongoClient.from_uri(MONGODB_URI)
+  db = client[MONGO_DBNAME]
+  JSON.parse(IO.read('schema/create_tables.json')).each do |sql|
+    if sql.has_key?('create_table')
+      create_table = sql['create_table']
+      table_name = create_table['table_name']
+      columns = create_table['columns']
+      columns.each do |column|
+        column_name = column['column_name']
+        comment = column['comment']
+        if comment =~ /PK/
+          #puts "table_name:#{table_name} column_name:#{column_name} comment:#{comment.inspect}"
+          column_name = '_id' if column_name == 'id'
+          puts "#{table_name}.#{column_name} PK"
+          #collection = db[table_name]
+          #collection.ensure_index(column_name => Mongo::ASCENDING)
+        end
+      end
     end
   end
-  task :bson do
-    CORE_ENTITIES.each do |entity|
-      sh "script/bson_metrics.rb dump/#{MONGO_DBNAME}/#{entity}.bson"
-    end
-  end
+  client.close
 end

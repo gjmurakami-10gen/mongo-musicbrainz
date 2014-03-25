@@ -75,4 +75,6 @@ rake load_tables
      5302.46 real      3548.50 user        35.60 sys
 
 time rake merge_1 merge_n
-    real	581m31.167s
+    real 581m31.167s
+    user 247m0.336s
+    sys	32m47.260s
