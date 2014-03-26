@@ -14,12 +14,11 @@
 # limitations under the License.
 
 require 'time'
-require 'json'
 require 'pp'
+require 'json'
 require 'mongo'
 require 'benchmark'
 require 'ruby-prof'
-require 'trollop'
 
 def hash_by_key(a, key)
   Hash[*a.collect{|e| [e[key], e]}.flatten(1)]
@@ -36,8 +35,7 @@ def bulk_merge(parent_docs, parent_key, child_docs_hash, child_key, parent_coll)
     child_doc = child_docs_hash[fk]
     puts("warning: #{$0} #{ARGV.join(' ')} - line:#{__LINE__} - unexpected fk:#{fk.inspect} - continuing") unless child_doc
     next unless child_doc
-    doc[parent_key] = child_doc
-    bulk.find({'_id' => doc['_id']}).replace_one(doc)
+    bulk.find({'_id' => doc['_id']}).update_one({'$set' => {parent_key => child_doc}})
     count += 1
   end
   bulk.execute if count > 0
@@ -81,14 +79,14 @@ bm = Benchmark.measure do
     puts "info: child #{child_name.inspect} key #{child_key.inspect} count:#{child_docs.count}"
     abort("warning: no docs found for child #{child_name.inspect} key #{child_key.inspect} - exit") if child_docs.empty?
     child_docs_hash = hash_by_key(child_docs, child_key)
-    parent_coll.find.each_slice(SLICE_SIZE) do |parent_docs|
+    parent_coll.find({parent_key => {'$exists' => true}}, :fields => {'_id' => 1, parent_key => 1}).each_slice(SLICE_SIZE) do |parent_docs|
       doc_count += parent_docs.size
       bulk_merge(parent_docs, parent_key, child_docs_hash, child_key, parent_coll)
     end
   else
     puts "info: ******** over #{THRESHOLD} threshold ********"
     print "info: progress: "
-    parent_coll.find.each_slice(SLICE_SIZE) do |parent_docs|
+    parent_coll.find({parent_key => {'$exists' => true}}, :fields => {'_id' => 1, parent_key => 1}).each_slice(SLICE_SIZE) do |parent_docs|
       doc_count += parent_docs.size
       keys = parent_docs.collect{|doc| val = doc[parent_key]; val.is_a?(Hash) ? val[child_key] : val }.sort.uniq
       child_docs = child_coll.find({child_key => {'$in' => keys}}).to_a

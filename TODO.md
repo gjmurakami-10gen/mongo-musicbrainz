@@ -21,6 +21,7 @@
   * bsondump
 * mongo-ruby-driver examples
   * mongodump
+* command-line option parsing - [Trollop](http://trollop.rubyforge.org/)
 
 # SCHEMA NOTES
 
