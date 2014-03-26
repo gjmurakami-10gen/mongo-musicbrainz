@@ -14,12 +14,11 @@
 # limitations under the License.
 
 require 'time'
-require 'json'
 require 'pp'
+require 'json'
 require 'mongo'
 require 'benchmark'
 require 'ruby-prof'
-require 'trollop'
 
 def hash_by_key(a, key)
   Hash[*a.collect{|e| [e[key], e]}.flatten(1)]
@@ -79,36 +78,42 @@ puts "info: child #{child_name.inspect} count: #{child_count}"
 THRESHOLD = 10000
 SLICE_SIZE = 10000
 
-if child_count <= THRESHOLD
-  child_docs = child_coll.find({child_key => {'$exists' => true}}).to_a
-  puts "info: child #{child_name.inspect} key #{child_key.inspect} count:#{child_docs.count}"
-  abort("warning: no docs found for child:#{child_name.inspect} key:#{child_key.inspect} - exit") if child_docs.empty?
-  child_docs_by_key = child_docs.collect{|doc| [doc[child_key], doc]}
-  child_docs_by_key.sort!{|a,b| a.first <=> b.first}
-  child_groups = ordered_group_by_first(child_docs_by_key)
-  puts "info: child #{child_name.inspect} group count:#{child_groups.count}"
-  ids = child_groups.collect{|group| group.first}
-  parent_docs = parent_coll.find({'_id' => {'$in' => ids}}).to_a
-  parent_docs_hash = hash_by_key(parent_docs, '_id')
-  bulk_merge(parent_docs_hash, parent_key, child_groups, parent_coll)
-else
-  puts "info: ******** over #{THRESHOLD} threshold ********"
-  child_coll.ensure_index(child_key => Mongo::ASCENDING)
-  print "info: progress: "
-  parent_coll.find.each_slice(SLICE_SIZE) do |parent_docs|
-    ids = parent_docs.collect{|doc| doc['_id']}
-    child_docs = child_coll.find({child_key => {'$in' => ids}}).to_a
-    next if child_docs.empty?
+doc_count = 0
+bm = Benchmark.measure do
+  if child_count <= THRESHOLD
+    child_docs = child_coll.find({child_key => {'$exists' => true}}).to_a
+    puts "info: child #{child_name.inspect} key #{child_key.inspect} count:#{child_docs.count}"
+    abort("warning: no docs found for child:#{child_name.inspect} key:#{child_key.inspect} - exit") if child_docs.empty?
     child_docs_by_key = child_docs.collect{|doc| [doc[child_key], doc]}
     child_docs_by_key.sort!{|a,b| a.first <=> b.first}
-    #puts "debug: child #{child_name.inspect} slice doc count:#{child_docs_by_key.count}"
     child_groups = ordered_group_by_first(child_docs_by_key)
-    #puts "debug: child #{child_name.inspect} slice group count:#{child_groups.count}"
-    parent_docs_hash = hash_by_key(parent_docs, '_id')
-    count = bulk_merge(parent_docs_hash, parent_key, child_groups, parent_coll)
-    print count
-    putc('.')
+    puts "info: child #{child_name.inspect} group count:#{child_groups.count}"
+    ids = child_groups.collect{|group| group.first}
+    parent_coll.find({'_id' => {'$in' => ids}}).each_slice(SLICE_SIZE) do |parent_docs|
+      doc_count += parent_docs.size
+      parent_docs_hash = hash_by_key(parent_docs, '_id')
+      bulk_merge(parent_docs_hash, parent_key, child_groups, parent_coll)
+    end
+  else
+    puts "info: ******** over #{THRESHOLD} threshold ********"
+    child_coll.ensure_index(child_key => Mongo::ASCENDING)
+    print "info: progress: "
+    parent_coll.find.each_slice(SLICE_SIZE) do |parent_docs|
+      doc_count += parent_docs.size
+      ids = parent_docs.collect{|doc| doc['_id']}
+      child_docs = child_coll.find({child_key => {'$in' => ids}}).to_a
+      putc('.')
+      next if child_docs.empty?
+      child_docs_by_key = child_docs.collect{|doc| [doc[child_key], doc]}
+      child_docs_by_key.sort!{|a,b| a.first <=> b.first}
+      #puts "debug: child #{child_name.inspect} slice doc count:#{child_docs_by_key.count}"
+      child_groups = ordered_group_by_first(child_docs_by_key)
+      #puts "debug: child #{child_name.inspect} slice group count:#{child_groups.count}"
+      parent_docs_hash = hash_by_key(parent_docs, '_id')
+      count = bulk_merge(parent_docs_hash, parent_key, child_groups, parent_coll)
+      print count
+    end
+    puts
   end
-  puts
 end
-
+puts "docs_per_sec: #{(doc_count.to_f/[bm.real, 0.000001].max).round}"
