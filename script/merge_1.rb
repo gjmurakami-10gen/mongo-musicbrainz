@@ -32,9 +32,9 @@ def bulk_merge(parent_docs, parent_key, child_docs_hash, child_key, parent_coll)
     val = doc[parent_key]
     next unless val
     fk = val.is_a?(Hash) ? val[child_key] : val
-    abort("warning: #{$0} #{ARGV.join(' ')} - line:#{__LINE__} - expected child key #{child_key.inspect} to reapply merge - val:#{val.inspect} - exit") unless fk
+    abort("abort: #{$0} #{ARGV.join(' ')} - line:#{__LINE__} - expected child key #{child_key.inspect} to reapply merge - val:#{val.inspect} - exit") unless fk
     child_doc = child_docs_hash[fk]
-    abort("warning: #{$0} #{ARGV.join(' ')} - line:#{__LINE__} - unexpected fk:#{fk.inspect} - exit") unless child_doc
+    puts("warning: #{$0} #{ARGV.join(' ')} - line:#{__LINE__} - unexpected fk:#{fk.inspect} - continuing") unless child_doc
     next unless child_doc
     doc[parent_key] = child_doc
     bulk.find({'_id' => doc['_id']}).replace_one(doc)
@@ -74,25 +74,32 @@ puts "info: child #{child_name.inspect} count: #{child_count}"
 THRESHOLD = 10000
 SLICE_SIZE = 10000
 
-if child_count <= THRESHOLD
-  child_docs = child_coll.find({child_key => {'$exists' => true}}).to_a
-  puts "info: child #{child_name.inspect} key #{child_key.inspect} count:#{child_docs.count}"
-  abort("warning: no docs found for child #{child_name.inspect} key #{child_key.inspect} - exit") if child_docs.empty?
-  child_docs_hash = hash_by_key(child_docs, child_key)
-  parent_coll.find.each_slice(SLICE_SIZE) do |parent_docs|
-    bulk_merge(parent_docs, parent_key, child_docs_hash, child_key, parent_coll)
-  end
-else
-  puts "info: ******** over #{THRESHOLD} threshold ********"
-  print "info: progress: "
-  parent_coll.find.each_slice(SLICE_SIZE) do |parent_docs|
-    ids = parent_docs.collect{|doc| doc[parent_key]}
-    child_docs = child_coll.find({child_key => {'$in' => ids}}).to_a
-    next if child_docs.empty?
+bm = Benchmark.measure do
+  doc_count = 0
+  if child_count <= THRESHOLD
+    child_docs = child_coll.find({child_key => {'$exists' => true}}).to_a
+    puts "info: child #{child_name.inspect} key #{child_key.inspect} count:#{child_docs.count}"
+    abort("warning: no docs found for child #{child_name.inspect} key #{child_key.inspect} - exit") if child_docs.empty?
     child_docs_hash = hash_by_key(child_docs, child_key)
-    count = bulk_merge(parent_docs, parent_key, child_docs_hash, child_key, parent_coll)
-    print count
-    putc('.')
+    parent_coll.find.each_slice(SLICE_SIZE) do |parent_docs|
+      doc_count += parent_docs.size
+      bulk_merge(parent_docs, parent_key, child_docs_hash, child_key, parent_coll)
+    end
+  else
+    puts "info: ******** over #{THRESHOLD} threshold ********"
+    print "info: progress: "
+    parent_coll.find.each_slice(SLICE_SIZE) do |parent_docs|
+      doc_count += parent_docs.size
+      keys = parent_docs.collect{|doc| val = doc[parent_key]; val.is_a?(Hash) ? val[child_key] : val }.sort.uniq
+      child_docs = child_coll.find({child_key => {'$in' => keys}}).to_a
+      putc('.')
+      next if child_docs.empty?
+      child_docs_hash = hash_by_key(child_docs, child_key)
+      count = bulk_merge(parent_docs, parent_key, child_docs_hash, child_key, parent_coll)
+      print count
+    end
+    puts
   end
-  puts
 end
+puts "docs_per_sec: #{(doc_count.to_f/[bm.real, 0.000001].max).round}"
+
