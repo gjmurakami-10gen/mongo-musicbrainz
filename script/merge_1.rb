@@ -74,8 +74,8 @@ puts "info: child #{child_name.inspect} count: #{child_count}"
 THRESHOLD = 10000
 SLICE_SIZE = 10000
 
+doc_count = 0
 bm = Benchmark.measure do
-  doc_count = 0
   if child_count <= THRESHOLD
     child_docs = child_coll.find({child_key => {'$exists' => true}}).to_a
     puts "info: child #{child_name.inspect} key #{child_key.inspect} count:#{child_docs.count}"
