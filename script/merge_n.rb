@@ -34,14 +34,12 @@ def ordered_group_by_first(pairs)
   end.first
 end
 
-def bulk_merge(parent_docs_hash, parent_key, child_groups, parent_coll)
+def bulk_merge(parent_coll, parent_key, child_groups)
   count = 0
   bulk = parent_coll.initialize_unordered_bulk_op
   child_groups.each do |group|
     key = group.first
-    doc = parent_docs_hash[key] # nil check(?)
-    doc[parent_key] = group.last # nil[] will fail
-    bulk.find({'_id' => key}).replace_one(doc)
+    bulk.find({'_id' => key}).update_one({'$set' => {parent_key => group.last}})
     count += 1
   end
   bulk.execute if count > 0
@@ -82,35 +80,30 @@ doc_count = 0
 bm = Benchmark.measure do
   if child_count <= THRESHOLD
     child_docs = child_coll.find({child_key => {'$exists' => true}}).to_a
-    puts "info: child #{child_name.inspect} key #{child_key.inspect} count:#{child_docs.count}"
+    puts "info: child:#{child_name.inspect} key:#{child_key.inspect} count:#{child_docs.count}"
     abort("warning: no docs found for child:#{child_name.inspect} key:#{child_key.inspect} - exit") if child_docs.empty?
     child_docs_by_key = child_docs.collect{|doc| [doc[child_key], doc]}
     child_docs_by_key.sort!{|a,b| a.first <=> b.first}
     child_groups = ordered_group_by_first(child_docs_by_key)
-    puts "info: child #{child_name.inspect} group count:#{child_groups.count}"
-    ids = child_groups.collect{|group| group.first}
-    parent_coll.find({'_id' => {'$in' => ids}}).each_slice(SLICE_SIZE) do |parent_docs|
-      doc_count += parent_docs.size
-      parent_docs_hash = hash_by_key(parent_docs, '_id')
-      bulk_merge(parent_docs_hash, parent_key, child_groups, parent_coll)
-    end
+    puts "info: child:#{child_name.inspect} group count:#{child_groups.count}"
+    bulk_merge(parent_coll, parent_key, child_groups)
   else
     puts "info: ******** over #{THRESHOLD} threshold ********"
     child_coll.ensure_index(child_key => Mongo::ASCENDING)
     print "info: progress: "
-    parent_coll.find.each_slice(SLICE_SIZE) do |parent_docs|
+    parent_coll.find({}, :fields => {'_id' => 1}).each_slice(SLICE_SIZE) do |parent_docs|
       doc_count += parent_docs.size
       ids = parent_docs.collect{|doc| doc['_id']}
       child_docs = child_coll.find({child_key => {'$in' => ids}}).to_a
       putc('.')
+      STDOUT.flush
       next if child_docs.empty?
       child_docs_by_key = child_docs.collect{|doc| [doc[child_key], doc]}
       child_docs_by_key.sort!{|a,b| a.first <=> b.first}
       #puts "debug: child #{child_name.inspect} slice doc count:#{child_docs_by_key.count}"
       child_groups = ordered_group_by_first(child_docs_by_key)
       #puts "debug: child #{child_name.inspect} slice group count:#{child_groups.count}"
-      parent_docs_hash = hash_by_key(parent_docs, '_id')
-      count = bulk_merge(parent_docs_hash, parent_key, child_groups, parent_coll)
+      count = bulk_merge(parent_coll, parent_key, child_groups)
       print count
     end
     puts

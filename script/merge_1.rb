@@ -91,6 +91,7 @@ bm = Benchmark.measure do
       keys = parent_docs.collect{|doc| val = doc[parent_key]; val.is_a?(Hash) ? val[child_key] : val }.sort.uniq
       child_docs = child_coll.find({child_key => {'$in' => keys}}).to_a
       putc('.')
+      STDOUT.flush
       next if child_docs.empty?
       child_docs_hash = hash_by_key(child_docs, child_key)
       count = bulk_merge(parent_docs, parent_key, child_docs_hash, child_key, parent_coll)

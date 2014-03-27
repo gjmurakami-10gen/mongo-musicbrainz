@@ -47,6 +47,7 @@ end
 
 task :default do
   puts <<-EOF
+  MONGODB_URI='#{MONGODB_URI}'
   usage:
     rake fetch
     rake unarchive
