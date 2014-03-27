@@ -88,8 +88,6 @@ module Mongo
   end
 end
 
-MONGO_DBNAME = "musicbrainz"
-
 USAGE = "usage: MONGODB_URI='mongodb://localhost:27017/database_name' #{$0} parent.foreign_key child.primary_key"
 abort(USAGE) if ARGV.size != 2
 parent_name, parent_key = ARGV[0].split('.', -1)
