@@ -63,7 +63,7 @@ module Mongo
       @child_hash[key]
     end
 
-    def bulk_merge_batch(parent_docs)
+    def merge_1_batch(parent_docs)
       count = 0
       bulk = @parent_coll.initialize_unordered_bulk_op
       parent_docs.each do |doc|
@@ -88,7 +88,7 @@ module Mongo
         doc_count += parent_docs.size
         putc('.')
         STDOUT.flush
-        bulk_merge_batch(parent_docs)
+        merge_1_batch(parent_docs)
       end
       puts
       return doc_count

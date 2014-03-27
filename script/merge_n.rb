@@ -34,7 +34,7 @@ def ordered_group_by_first(pairs)
   end.first
 end
 
-def bulk_merge(parent_coll, parent_key, child_groups)
+def merge_n_batch(parent_coll, parent_key, child_groups)
   count = 0
   bulk = parent_coll.initialize_unordered_bulk_op
   child_groups.each do |group|
@@ -43,19 +43,12 @@ def bulk_merge(parent_coll, parent_key, child_groups)
     count += 1
   end
   bulk.execute if count > 0
-  count
+  print ">#{count}"
 end
 
-BASE_DIR = File.expand_path('../..', __FILE__)
-FULLEXPORT_DIR = "#{BASE_DIR}/ftp.musicbrainz.org/pub/musicbrainz/data/fullexport"
-LATEST = "#{FULLEXPORT_DIR}/LATEST"
-SCHEMA_FILE = "#{BASE_DIR}/schema/create_tables.json"
-MONGO_DBNAME = "musicbrainz"
-
-$create_tables = JSON.parse(IO.read(SCHEMA_FILE))
-$client = Mongo::MongoClient.from_uri
-$db = $client[MONGO_DBNAME]
-$collection = nil
+mongo_client = Mongo::MongoClient.from_uri
+mongo_uri = Mongo::URIParser.new(ENV['MONGODB_URI'])
+db = mongo_client[mongo_uri.db_name]
 
 USAGE = "usage: #{$0} parent.foreign_key child.id"
 abort(USAGE) if ARGV.size != 2
@@ -64,12 +57,12 @@ child_arg = ARGV[1].split('.', -1)
 abort(USAGE) if parent_arg.size != 2 || child_arg.size != 2
 
 parent_name, parent_key = parent_arg
-parent_coll = $db[parent_name]
+parent_coll = db[parent_name]
 parent_count = parent_coll.count
 puts "info: parent #{parent_name.inspect} count: #{parent_count}"
 
 child_name, child_key = child_arg
-child_coll = $db[child_name]
+child_coll = db[child_name]
 child_count = child_coll.count
 puts "info: child #{child_name.inspect} count: #{child_count}"
 child_coll.ensure_index(child_key => Mongo::ASCENDING)
@@ -87,7 +80,8 @@ bm = Benchmark.measure do
     child_docs_by_key.sort!{|a,b| a.first <=> b.first}
     child_groups = ordered_group_by_first(child_docs_by_key)
     puts "info: child:#{child_name.inspect} group count:#{child_groups.count}"
-    bulk_merge(parent_coll, parent_key, child_groups)
+    print "info: progress: "
+    merge_n_batch(parent_coll, parent_key, child_groups)
   else
     puts "info: ******** over #{THRESHOLD} threshold ********"
     print "info: progress: "
@@ -103,10 +97,11 @@ bm = Benchmark.measure do
       #puts "debug: child #{child_name.inspect} slice doc count:#{child_docs_by_key.count}"
       child_groups = ordered_group_by_first(child_docs_by_key)
       #puts "debug: child #{child_name.inspect} slice group count:#{child_groups.count}"
-      count = bulk_merge(parent_coll, parent_key, child_groups)
-      print count
+      merge_n_batch(parent_coll, parent_key, child_groups)
     end
-    puts
   end
+  puts
 end
-puts "docs_per_sec: #{(doc_count.to_f/[bm.real, 0.000001].max).round}"
+puts "info: real: #{'%.2f' % bm.real}, user: #{'%.2f' % bm.utime}, system:#{'%.2f' % bm.stime}, docs_per_sec: #{(doc_count.to_f/[bm.real, 0.000001].max).round}"
+mongo_client.close
+
