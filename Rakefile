@@ -36,7 +36,7 @@ MONGOD_PORT = 37017
 MONGOD_LOCKPATH = "#{MONGO_DBPATH}/mongod.lock"
 MONGOD_LOGPATH = "#{MONGO_DBPATH}/mongod.log"
 MONGO_DBNAME = "musicbrainz"
-MONGODB_URI = "mongodb://localhost:#{MONGOD_PORT}"
+MONGODB_URI = "mongodb://localhost:#{MONGOD_PORT}/#{MONGO_DBNAME}"
 ENV['MONGODB_URI'] = MONGODB_URI
 
 RSpec::Core::RakeTask.new(:spec)
@@ -121,7 +121,7 @@ task :merge_1 do
       ['artist.type', 'artist_type._id'],
       ['artist.gender', 'gender._id'],
       ['artist_alias.type', 'artist_alias_type._id'],
-      ['artist_credit_name.artist_credit', 'artist_credit_._id'],
+      ['artist_credit_name.artist_credit', 'artist_credit._id'],
       ['label.type', 'label_type._id'],
       ['label_alias.type', 'label_alias_type._id'],
       ['medium.format', 'medium_format._id'],

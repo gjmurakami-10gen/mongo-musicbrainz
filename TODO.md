@@ -1,5 +1,7 @@
 # TO DO
 
+* merge_n dbname from MONGODB_URI, eliminate MONGO_DBNAME
+
 * mbdump update
   * CURRENT versus LATEST decoupling
 

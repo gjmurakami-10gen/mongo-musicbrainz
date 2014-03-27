@@ -72,6 +72,7 @@ child_name, child_key = child_arg
 child_coll = $db[child_name]
 child_count = child_coll.count
 puts "info: child #{child_name.inspect} count: #{child_count}"
+child_coll.ensure_index(child_key => Mongo::ASCENDING)
 
 THRESHOLD = 10000
 SLICE_SIZE = 10000
@@ -89,7 +90,6 @@ bm = Benchmark.measure do
     bulk_merge(parent_coll, parent_key, child_groups)
   else
     puts "info: ******** over #{THRESHOLD} threshold ********"
-    child_coll.ensure_index(child_key => Mongo::ASCENDING)
     print "info: progress: "
     parent_coll.find({}, :fields => {'_id' => 1}).each_slice(SLICE_SIZE) do |parent_docs|
       doc_count += parent_docs.size
