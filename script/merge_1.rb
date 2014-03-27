@@ -27,6 +27,7 @@ end
 module Mongo
   class Combinator
     SLICE_SIZE = 10000
+    THRESHOLD = 10000
 
     def initialize(db, parent_name, parent_key, child_name, child_key)
       @parent_name = parent_name
@@ -36,22 +37,29 @@ module Mongo
       @child_name = child_name
       @child_key = child_key
       @child_coll = db[@child_name]
-      puts "info: child #{@child_name.inspect}, count: #{@child_coll.count}"
+      @child_count = @child_coll.count
+      puts "info: child #{@child_name.inspect}, count: #{@child_count}"
       @child_coll.ensure_index(child_key => Mongo::ASCENDING)
       @child_hash = Hash.new
+      @parent_docs_fetched = nil
     end
 
     def load_child_hash(parent_docs)
-      keys = parent_docs.collect{|doc| val = doc[@parent_key]; val.is_a?(Hash) ? val[@child_key] : val }.sort.uniq
-      child_docs = @child_coll.find({@child_key => {'$in' => keys}}).to_a
+      child_docs = if @child_count <= THRESHOLD
+                     @child_coll.find({@child_key => {'$exists' => true}}).to_a
+                   else
+                     keys = parent_docs.collect{|doc| val = doc[@parent_key]; val.is_a?(Hash) ? val[@child_key] : val }.sort.uniq
+                     @child_coll.find({@child_key => {'$in' => keys}}).to_a
+                   end
       print "<#{child_docs.count}"
       @child_hash = hash_by_key(child_docs, @child_key)
     end
 
     def child_fetch(key, parent_docs)
       doc = @child_hash[key]
-      return doc if doc
+      return doc if doc || parent_docs == @parent_docs_fetched
       load_child_hash(parent_docs)
+      @parent_docs_fetched = parent_docs
       @child_hash[key]
     end
 
