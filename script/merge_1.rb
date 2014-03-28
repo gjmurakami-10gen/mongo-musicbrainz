@@ -86,12 +86,12 @@ module Mongo
       print "info: progress: "
       @parent_coll.find({@parent_key => {'$exists' => true}}, :fields => {'_id' => 1, @parent_key => 1}).each_slice(SLICE_SIZE) do |parent_docs|
         doc_count += parent_docs.size
+        merge_1_batch(parent_docs)
         putc('.')
         STDOUT.flush
-        merge_1_batch(parent_docs)
       end
       puts
-      return doc_count
+      doc_count
     end
   end
 end

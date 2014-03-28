@@ -34,73 +34,98 @@ def ordered_group_by_first(pairs)
   end.first
 end
 
-def merge_n_batch(parent_coll, parent_key, child_groups)
-  count = 0
-  bulk = parent_coll.initialize_unordered_bulk_op
-  child_groups.each do |group|
-    key = group.first
-    bulk.find({'_id' => key}).update_one({'$set' => {parent_key => group.last}})
-    count += 1
+module Mongo
+  class Combinator
+    SLICE_SIZE = 10000
+    THRESHOLD = 10000
+
+    def initialize(db, parent_name, parent_key, child_name, child_key)
+      @parent_name = parent_name
+      @parent_key = parent_key
+      @parent_coll = db[@parent_name]
+      puts "info: parent #{parent_name.inspect}, count: #{@parent_coll.count}"
+      @child_name = child_name
+      @child_key = child_key
+      @child_coll = db[@child_name]
+      @child_count = @child_coll.count
+      puts "info: child #{@child_name.inspect}, count: #{@child_count}"
+      @child_coll.ensure_index(child_key => Mongo::ASCENDING)
+    end
+
+    def load_child_groups(parent_docs = nil)
+      child_docs = if @child_count <= THRESHOLD
+                     @child_coll.find({@child_key => {'$exists' => true}}).to_a
+                   else
+                     keys = parent_docs.collect{|doc| doc['_id']}
+                     @child_coll.find({@child_key => {'$in' => keys}}).to_a
+                   end
+      child_docs_by_key = child_docs.collect{|doc| [doc[@child_key], doc]}
+      child_docs_by_key.sort!{|a,b| a.first <=> b.first}
+      child_groups = ordered_group_by_first(child_docs_by_key)
+      print "<#{child_docs.size}~#{child_groups.size}"
+      child_groups
+    end
+
+    def merge_n_batch(child_groups)
+      count = 0
+      bulk = @parent_coll.initialize_unordered_bulk_op
+      child_groups.each do |group|
+        key = group.first
+        bulk.find({'_id' => key}).update_one({'$set' => {@parent_key => group.last}})
+        count += 1
+      end
+      bulk.execute if count > 0
+      print ">#{count}"
+    end
+
+    def merge_n_small
+      child_groups = load_child_groups
+      merge_n_batch(child_groups)
+      child_groups.size
+    end
+
+    def merge_n_big
+      doc_count = 0
+      @parent_coll.find({}, :fields => {'_id' => 1}).each_slice(SLICE_SIZE) do |parent_docs|
+        doc_count += parent_docs.size
+        child_groups = load_child_groups(parent_docs)
+        merge_n_batch(child_groups)
+        putc('.')
+        STDOUT.flush
+      end
+      doc_count
+    end
+
+    def merge_n
+      doc_count = 0
+      if @child_count <= THRESHOLD
+        puts "info: under THRESHOLD #{THRESHOLD}"
+        print "info: progress: "
+        doc_count = merge_n_small
+      else
+        print "info: progress: "
+        doc_count = merge_n_big
+      end
+      puts
+      doc_count
+    end
   end
-  bulk.execute if count > 0
-  print ">#{count}"
 end
+
+USAGE = "usage: MONGODB_URI='mongodb://localhost:27017/database_name' #{$0} parent.child_field_name child.foreign_key"
+abort(USAGE) if ARGV.size != 2
+parent_name, parent_key = ARGV[0].split('.', -1)
+child_name, child_key = ARGV[1].split('.', -1)
+abort(USAGE) unless parent_name && parent_key && child_name && child_key
 
 mongo_client = Mongo::MongoClient.from_uri
 mongo_uri = Mongo::URIParser.new(ENV['MONGODB_URI'])
 db = mongo_client[mongo_uri.db_name]
-
-USAGE = "usage: #{$0} parent.foreign_key child.id"
-abort(USAGE) if ARGV.size != 2
-parent_arg = ARGV[0].split('.', -1)
-child_arg = ARGV[1].split('.', -1)
-abort(USAGE) if parent_arg.size != 2 || child_arg.size != 2
-
-parent_name, parent_key = parent_arg
-parent_coll = db[parent_name]
-parent_count = parent_coll.count
-puts "info: parent #{parent_name.inspect} count: #{parent_count}"
-
-child_name, child_key = child_arg
-child_coll = db[child_name]
-child_count = child_coll.count
-puts "info: child #{child_name.inspect} count: #{child_count}"
-child_coll.ensure_index(child_key => Mongo::ASCENDING)
-
-THRESHOLD = 10000
-SLICE_SIZE = 10000
+combinator = Mongo::Combinator.new(db, parent_name, parent_key, child_name, child_key)
 
 doc_count = 0
 bm = Benchmark.measure do
-  if child_count <= THRESHOLD
-    child_docs = child_coll.find({child_key => {'$exists' => true}}).to_a
-    puts "info: child:#{child_name.inspect} key:#{child_key.inspect} count:#{child_docs.count}"
-    abort("warning: no docs found for child:#{child_name.inspect} key:#{child_key.inspect} - exit") if child_docs.empty?
-    child_docs_by_key = child_docs.collect{|doc| [doc[child_key], doc]}
-    child_docs_by_key.sort!{|a,b| a.first <=> b.first}
-    child_groups = ordered_group_by_first(child_docs_by_key)
-    puts "info: child:#{child_name.inspect} group count:#{child_groups.count}"
-    print "info: progress: "
-    merge_n_batch(parent_coll, parent_key, child_groups)
-  else
-    puts "info: ******** over #{THRESHOLD} threshold ********"
-    print "info: progress: "
-    parent_coll.find({}, :fields => {'_id' => 1}).each_slice(SLICE_SIZE) do |parent_docs|
-      doc_count += parent_docs.size
-      ids = parent_docs.collect{|doc| doc['_id']}
-      child_docs = child_coll.find({child_key => {'$in' => ids}}).to_a
-      putc('.')
-      STDOUT.flush
-      next if child_docs.empty?
-      child_docs_by_key = child_docs.collect{|doc| [doc[child_key], doc]}
-      child_docs_by_key.sort!{|a,b| a.first <=> b.first}
-      #puts "debug: child #{child_name.inspect} slice doc count:#{child_docs_by_key.count}"
-      child_groups = ordered_group_by_first(child_docs_by_key)
-      #puts "debug: child #{child_name.inspect} slice group count:#{child_groups.count}"
-      merge_n_batch(parent_coll, parent_key, child_groups)
-    end
-  end
-  puts
+  doc_count = combinator.merge_n
 end
 puts "info: real: #{'%.2f' % bm.real}, user: #{'%.2f' % bm.utime}, system:#{'%.2f' % bm.stime}, docs_per_sec: #{(doc_count.to_f/[bm.real, 0.000001].max).round}"
 mongo_client.close
