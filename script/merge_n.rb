@@ -36,7 +36,7 @@ end
 module Mongo
   class Combinator
     SLICE_SIZE = 20000
-    THRESHOLD = 100000
+    THRESHOLD = 1000000
 
     def initialize(db, parent_name, parent_key, child_name, child_key)
       @parent_name = parent_name
@@ -53,7 +53,7 @@ module Mongo
 
     def load_child_groups(parent_docs = nil)
       child_docs = if @child_count <= THRESHOLD
-                     @child_coll.find({@child_key => {'ne' => nil}}).to_a
+                     @child_coll.find({@child_key => {'$ne' => nil}}).to_a
                    else
                      keys = parent_docs.collect{|doc| doc['_id']}
                      @child_coll.find({@child_key => {'$in' => keys}}).to_a
@@ -102,6 +102,7 @@ module Mongo
         print "info: progress: "
         doc_count = merge_n_small
       else
+        puts "info: over THRESHOLD #{THRESHOLD}"
         print "info: progress: "
         doc_count = merge_n_big
       end
@@ -111,21 +112,22 @@ module Mongo
   end
 end
 
-USAGE = "usage: MONGODB_URI='mongodb://localhost:27017/database_name' #{$0} parent.child_field_name child.foreign_key"
-abort(USAGE) if ARGV.size != 2
-parent_name, parent_key = ARGV[0].split('.', -1)
-child_name, child_key = ARGV[1].split('.', -1)
-abort(USAGE) unless parent_name && parent_key && child_name && child_key
+if $0 == __FILE__
+  USAGE = "usage: MONGODB_URI='mongodb://localhost:27017/database_name' #{$0} parent.child_field_name child.foreign_key"
+  abort(USAGE) if ARGV.size != 2
+  parent_name, parent_key = ARGV[0].split('.', -1)
+  child_name, child_key = ARGV[1].split('.', -1)
+  abort(USAGE) unless parent_name && parent_key && child_name && child_key
 
-mongo_client = Mongo::MongoClient.from_uri
-mongo_uri = Mongo::URIParser.new(ENV['MONGODB_URI'])
-db = mongo_client[mongo_uri.db_name]
-combinator = Mongo::Combinator.new(db, parent_name, parent_key, child_name, child_key)
+  mongo_client = Mongo::MongoClient.from_uri
+  mongo_uri = Mongo::URIParser.new(ENV['MONGODB_URI'])
+  db = mongo_client[mongo_uri.db_name]
+  combinator = Mongo::Combinator.new(db, parent_name, parent_key, child_name, child_key)
 
-doc_count = 0
-bm = Benchmark.measure do
-  doc_count = combinator.merge_n
+  doc_count = 0
+  bm = Benchmark.measure do
+    doc_count = combinator.merge_n
+  end
+  puts "info: real: #{'%.2f' % bm.real}, user: #{'%.2f' % bm.utime}, system:#{'%.2f' % bm.stime}, docs_per_sec: #{(doc_count.to_f/[bm.real, 0.000001].max).round}"
+  mongo_client.close
 end
-puts "info: real: #{'%.2f' % bm.real}, user: #{'%.2f' % bm.utime}, system:#{'%.2f' % bm.stime}, docs_per_sec: #{(doc_count.to_f/[bm.real, 0.000001].max).round}"
-mongo_client.close
-

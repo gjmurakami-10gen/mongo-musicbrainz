@@ -95,20 +95,22 @@ module Mongo
   end
 end
 
-USAGE = "usage: MONGODB_URI='mongodb://localhost:27017/database_name' #{$0} parent.foreign_key child.primary_key"
-abort(USAGE) if ARGV.size != 2
-parent_name, parent_key = ARGV[0].split('.', -1)
-child_name, child_key = ARGV[1].split('.', -1)
-abort(USAGE) unless parent_name && parent_key && child_name && child_key
+if $0 == __FILE__
+  USAGE = "usage: MONGODB_URI='mongodb://localhost:27017/database_name' #{$0} parent.foreign_key child.primary_key"
+  abort(USAGE) if ARGV.size != 2
+  parent_name, parent_key = ARGV[0].split('.', -1)
+  child_name, child_key = ARGV[1].split('.', -1)
+  abort(USAGE) unless parent_name && parent_key && child_name && child_key
 
-mongo_client = Mongo::MongoClient.from_uri
-mongo_uri = Mongo::URIParser.new(ENV['MONGODB_URI'])
-db = mongo_client[mongo_uri.db_name]
-combinator = Mongo::Combinator.new(db, parent_name, parent_key, child_name, child_key)
+  mongo_client = Mongo::MongoClient.from_uri
+  mongo_uri = Mongo::URIParser.new(ENV['MONGODB_URI'])
+  db = mongo_client[mongo_uri.db_name]
+  combinator = Mongo::Combinator.new(db, parent_name, parent_key, child_name, child_key)
 
-doc_count = 0
-bm = Benchmark.measure do
-  doc_count = combinator.merge_1
+  doc_count = 0
+  bm = Benchmark.measure do
+    doc_count = combinator.merge_1
+  end
+  puts "info: real: #{'%.2f' % bm.real}, user: #{'%.2f' % bm.utime}, system:#{'%.2f' % bm.stime}, docs_per_sec: #{(doc_count.to_f/[bm.real, 0.000001].max).round}"
+  mongo_client.close
 end
-puts "info: real: #{'%.2f' % bm.real}, user: #{'%.2f' % bm.utime}, system:#{'%.2f' % bm.stime}, docs_per_sec: #{(doc_count.to_f/[bm.real, 0.000001].max).round}"
-mongo_client.close

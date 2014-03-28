@@ -1,12 +1,20 @@
 # TO DO
 
-* retest 100000 for SLICE_SIZE and THRESHOLD
-* not nil
+* rspec tests for merge_1 and merge_n
 * profile
+* mongo-c-driver mbdump_to_mongo
 * dbname in command line args
 
 * mbdump update
   * CURRENT versus LATEST decoupling
+
+# MEASUREMENTS
+
+* rake merge_1 merge_n
+
+    real	271m46.075s
+    user	58m44.975s
+    sys	    10m46.316s
 
 # TOOLS
 

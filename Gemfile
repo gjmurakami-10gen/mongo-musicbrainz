@@ -7,7 +7,4 @@ gem "mongo", "~> 1.10.0.rc0"
 gem 'bson', "~> 1.10.0.rc0"
 gem 'bson_ext', "~> 1.10.0.rc0"
 gem 'trollop'
-
-
-
-
+gem 'ruby-prof'
