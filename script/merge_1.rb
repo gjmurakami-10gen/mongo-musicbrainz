@@ -18,7 +18,6 @@ require 'pp'
 require 'json'
 require 'mongo'
 require 'benchmark'
-require 'ruby-prof'
 
 def hash_by_key(a, key)
   Hash[*a.collect{|e| [e[key], e]}.flatten(1)]
@@ -26,8 +25,8 @@ end
 
 module Mongo
   class Combinator
-    SLICE_SIZE = 10000
-    THRESHOLD = 10000
+    SLICE_SIZE = 20000
+    THRESHOLD = 100000
 
     def initialize(db, parent_name, parent_key, child_name, child_key)
       @parent_name = parent_name
@@ -46,7 +45,7 @@ module Mongo
 
     def load_child_hash(parent_docs)
       child_docs = if @child_count <= THRESHOLD
-                     @child_coll.find({@child_key => {'$exists' => true}}).to_a
+                     @child_coll.find({@child_key => {'$ne' => nil}}).to_a
                    else
                      keys = parent_docs.collect{|doc| val = doc[@parent_key]; val.is_a?(Hash) ? val[@child_key] : val }.sort.uniq
                      @child_coll.find({@child_key => {'$in' => keys}}).to_a
@@ -84,7 +83,7 @@ module Mongo
     def merge_1
       doc_count = 0
       print "info: progress: "
-      @parent_coll.find({@parent_key => {'$exists' => true}}, :fields => {'_id' => 1, @parent_key => 1}).each_slice(SLICE_SIZE) do |parent_docs|
+      @parent_coll.find({@parent_key => {'$ne' => nil}}, :fields => {'_id' => 1, @parent_key => 1}).each_slice(SLICE_SIZE) do |parent_docs|
         doc_count += parent_docs.size
         merge_1_batch(parent_docs)
         putc('.')

@@ -1,7 +1,9 @@
 # TO DO
 
-* merge_n dbname from MONGODB_URI, eliminate MONGO_DBNAME
 * retest 100000 for SLICE_SIZE and THRESHOLD
+* not nil
+* profile
+* dbname in command line args
 
 * mbdump update
   * CURRENT versus LATEST decoupling

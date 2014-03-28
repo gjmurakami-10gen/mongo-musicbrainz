@@ -18,7 +18,6 @@ require 'pp'
 require 'json'
 require 'mongo'
 require 'benchmark'
-require 'ruby-prof'
 
 def hash_by_key(a, key)
   Hash[*a.collect{|e| [e[key], e]}.flatten(1)]
@@ -36,8 +35,8 @@ end
 
 module Mongo
   class Combinator
-    SLICE_SIZE = 10000
-    THRESHOLD = 10000
+    SLICE_SIZE = 20000
+    THRESHOLD = 100000
 
     def initialize(db, parent_name, parent_key, child_name, child_key)
       @parent_name = parent_name
@@ -54,7 +53,7 @@ module Mongo
 
     def load_child_groups(parent_docs = nil)
       child_docs = if @child_count <= THRESHOLD
-                     @child_coll.find({@child_key => {'$exists' => true}}).to_a
+                     @child_coll.find({@child_key => {'ne' => nil}}).to_a
                    else
                      keys = parent_docs.collect{|doc| doc['_id']}
                      @child_coll.find({@child_key => {'$in' => keys}}).to_a

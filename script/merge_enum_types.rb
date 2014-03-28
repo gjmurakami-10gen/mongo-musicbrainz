@@ -65,7 +65,7 @@ $enum_types.each do |type_name, enum|
       $collection = $db[table_name]
       column_names.each do |column_name|
         p column_name
-        p $collection.find({column_name => {'$exists' => true}}).first
+        p $collection.find({column_name => {'$ne' => nil}}).first
       end
     else
       puts "collection #{table_name} not found"
