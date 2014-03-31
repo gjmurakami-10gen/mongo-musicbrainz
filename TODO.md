@@ -1,6 +1,8 @@
 # TO DO
 
+* bson_metrics - doc sizes - average, max
 * rspec tests for merge_1 and merge_n
+* core merges
 * profile
 * mongo-c-driver mbdump_to_mongo
 * dbname in command line args
@@ -10,11 +12,23 @@
 
 # MEASUREMENTS
 
-* rake merge_1 merge_n
+MacBook Pro Retina, 15-inch, Late 2013 2.6 GHz Intel Core i7
 
-    real	271m46.075s
-    user	58m44.975s
-    sys	    10m46.316s
+* rake load_tables
+
+     7244.43 real      3685.49 user        56.81 sys
+
+* rake merge_1
+
+    real	66m21.664s
+    user	24m5.080s
+    sys	    3m39.035s
+
+* rake merge_n
+
+    real	192m45.412s
+    user	35m53.214s
+    sys	    5m45.928s
 
 # TOOLS
 
@@ -44,14 +58,28 @@
 
          19102427 total
          13102579 recording
-          2291784 url
-          1241852 release
+          2291784 url -
+          1241852 release -
           1020270 release_group
            819407 artist
            457407 work
-            87908 area
-            78167 label
-             3053 place
+            87908 area -
+            78167 label -
+             3053 place -
+
+        # url by gid
+        # merge_1
+        ['artist.area', 'area._id'],
+        ['label.area', 'area._id'],
+        ['release_label.label', 'label._id'],
+        # merge_n
+        ['area.place', 'place.area'],
+        ['release_group.release', 'release.release_group'],
+
+        # remaining - artist recording release_group work
+        # study artist-album-track examples
+
+        # review - release_label
 
       * yellow - mostly-static lists (21)
       * red - external identifiers (9)

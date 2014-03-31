@@ -153,7 +153,11 @@ task :merge_1 do
       ['release.url', 'url.gid'],
       ['release_group.url', 'url.gid'],
       ['track.url', 'url.gid'],
-      ['work.url', 'url.gid']
+      ['work.url', 'url.gid'],
+      # core
+      ['artist.area', 'area._id'],
+      ['label.area', 'area._id'],
+      ['release_label.label', 'label._id']
   ].each do |parent, child|
     sh "MONGODB_URI='#{MONGODB_URI}' time ./script/merge_1.rb #{parent} #{child} || true"
   end
@@ -194,7 +198,10 @@ task :merge_n do
       ['release_group.gid_redirect', 'release_group_gid_redirect.new_id'],
       ['track.gid_redirect', 'track_gid_redirect.new_id'],
       ['url.gid_redirect', 'url_gid_redirect.new_id'],
-      ['work.gid_redirect', 'work_gid_redirect.new_id']
+      ['work.gid_redirect', 'work_gid_redirect.new_id'],
+      # core
+      ['area.place', 'place.area'],
+      ['release_group.release', 'release.release_group']
   ].each do |parent, child|
     sh "MONGODB_URI='#{MONGODB_URI}' time ./script/merge_n.rb #{parent} #{child} || true"
   end
@@ -216,7 +223,8 @@ namespace :metrics do
   end
   task :bson do
     CORE_ENTITIES.each do |entity|
-      sh "script/bson_metrics.rb dump/#{MONGO_DBNAME}/#{entity}.bson"
+      #sh "script/bson_metrics.rb dump/#{MONGO_DBNAME}/#{entity}.bson"
+      sh "../libbson/bson-metrics dump/#{MONGO_DBNAME}/#{entity}.bson"
     end
   end
 end
