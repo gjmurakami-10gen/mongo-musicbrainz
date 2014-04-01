@@ -1,14 +1,11 @@
 # TO DO
 
-* rspec tests for merge_1 and merge_n
-  * before
-  * shared examples
-  * sort sub-arrays for merge_n comparison
-* mongo shell rake task
-
+* core merger review
+* topological sort optimization to replace repeated merges
 * rspec studying
-* --progress option
-* core merges
+* merge improvements
+  * multi-merge
+  * --progress option
 * profile
 * mongo-c-driver mbdump_to_mongo
 * dbname in command line args
@@ -58,6 +55,7 @@ MacBook Pro Retina, 15-inch, Late 2013 2.6 GHz Intel Core i7
 
 # SCHEMA NOTES
 
+* [MusicBrainz Search](http://musicbrainz.org/search)
 * [MusicBrainz Schema diagram](http://wiki.musicbrainz.org/-/images/5/52/ngs.png)
     * color coding
       * blue - core entities (9) - area artist label place recording release release_group url work
@@ -73,22 +71,25 @@ MacBook Pro Retina, 15-inch, Late 2013 2.6 GHz Intel Core i7
             78167 label -
              3053 place -
 
-        # url by gid
-        # merge_1
+        * url by gid - all incorrect - grep GID mbdump/* shows GID use is PK and not FK
+            *
+        * merge_1
         ['artist.area', 'area._id'],
+        ['country_area.area', 'area._id'],
         ['label.area', 'area._id'],
         ['release_label.label', 'label._id'],
-        # merge_n
+        * merge_n
         ['area.place', 'place.area'],
         ['release_group.release', 'release.release_group'],
 
-        # remaining - artist recording release_group work
-        # study artist-album-track examples
+        * remaining - artist release_group recording work
+        * study artist-album-track examples
 
-        # review - release_label
+        * review - release_label
 
       * yellow - mostly-static lists (21)
       * red - external identifiers (9)
+      * join (non-yellow, multiple refs out) - artist_credit_name medium_cdtoc release_country release_label track
     * Advanced Relationships (AR) - l_* combinations table count (45)
     * area(9), artist(8), label(7), place(6), recording(5), release(4), release_group(3), url(2), work(1)
     * [description](http://musicbrainz.org/doc/Next_Generation_Schema/Advanced_Relationships_Table_Structure)

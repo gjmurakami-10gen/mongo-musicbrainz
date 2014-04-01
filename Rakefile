@@ -22,16 +22,19 @@ require 'mongo'
 # http://www.postgresql.org/docs/9.1/static/sql-createtable.html
 
 def file_to_s(file)
-  IO.read(file).chomp
+  File.exists?(file) ? IO.read(file).chomp : "NIL"
 end
 
-FTP_FULLEXPORT_DIR = File.absolute_path("ftp.musicbrainz.org/pub/musicbrainz/data/fullexport")
+FTP_FULLEXPORT_DIR = "ftp.musicbrainz.org/pub/musicbrainz/data/fullexport"
+FTP_FULLEXPORT_DIR_ABSOLUTE = File.absolute_path(FTP_FULLEXPORT_DIR)
 LATEST_FILE = "#{FTP_FULLEXPORT_DIR}/LATEST"
+CURRENT_FILE = "CURRENT"
 LATEST = file_to_s(LATEST_FILE)
+DB_TIME_ID = ENV['DB_TIME_ID'] || file_to_s(CURRENT_FILE) || LATEST
 FTP_LATEST_DIR = "#{FTP_FULLEXPORT_DIR}/#{LATEST}"
 DATA_LATEST_DIR = "data/fullexport/#{LATEST}"
 
-MONGO_DBPATH = "data/db/#{LATEST}"
+MONGO_DBPATH = "data/db/#{DB_TIME_ID}"
 MONGOD_PORT = 37017
 MONGOD_LOCKPATH = "#{MONGO_DBPATH}/mongod.lock"
 MONGOD_LOGPATH = "#{MONGO_DBPATH}/mongod.log"
@@ -49,11 +52,15 @@ task :default do
   puts <<-EOF
   MONGODB_URI='#{MONGODB_URI}'
   usage:
+    rake latest
     rake fetch
     rake unarchive
     rake mongo:start
     rake load_tables
     rake merge_1 merge_n
+    rake cutover
+    rake mongo:start
+    rake mongo:shell
     rake metrics:wc_all
     rake metrics:wc_core
     rake metrics:dump
@@ -67,9 +74,20 @@ file LATEST_FILE do |file|
   sh "wget --recursive ftp://#{file.name}" # need --recursive to retrieve the new version
 end
 
+desc "latest"
+task :latest do
+  sh "mv #{LATEST_FILE} #{LATEST_FILE}.#{LATEST} || true"
+  Rake::Task[LATEST_FILE].execute
+end
+
 desc "fetch"
 task :fetch => LATEST_FILE do
-  sh "wget --recursive -level=1 --continue #{FTP_LATEST_DIR}"
+  sh "wget --recursive --level=1 --continue #{FTP_LATEST_DIR}"
+end
+
+desc "cutover"
+task :cutover => 'mongo:stop' do
+  sh "cp #{LATEST_FILE} #{CURRENT_FILE}"
 end
 
 desc "unarchive"
@@ -125,6 +143,7 @@ task :merge_1 do
       ['artist.gender', 'gender._id'],
       ['artist_alias.type', 'artist_alias_type._id'],
       ['artist_credit_name.artist_credit', 'artist_credit._id'],
+      ['country_area.area', 'area._id'],
       ['label.type', 'label_type._id'],
       ['label_alias.type', 'label_alias_type._id'],
       ['medium.format', 'medium_format._id'],
@@ -140,23 +159,13 @@ task :merge_1 do
       ['release_group_secondary_type_join.secondary_type', 'release_group_secondary_type._id'],
       ['script_language.language', 'language._id'],
       ['script_language.script', 'script._id'],
-      ['track.medium', 'medium._id'],
+      #['track.medium', 'medium._id'], # instead ['medium.track', 'track.medium'], ['release.medium', 'medium.release'],
       ['work.language', 'language._id'],
       ['work.type', 'work_type._id'],
       ['work_alias.type', 'work_alias_type._id'],
-      ['work_attribute_type_allowed_value.work_attribute_type', 'work_attribute_type._id'], # must be before next
+      ['work_attribute_type_allowed_value.work_attribute_type', 'work_attribute_type._id'], # order before following
       ['work_attribute.work_attribute_type', 'work_attribute_type._id'],
       ['work_attribute.work_attribute_type_allowed_value', 'work_attribute_type_allowed_value._id'],
-      # url by gid
-      ['area.url', 'url.gid'],
-      ['artist.url', 'url.gid'],
-      ['label.url', 'url.gid'],
-      ['place.url', 'url.gid'],
-      ['recording.url', 'url.gid'],
-      ['release.url', 'url.gid'],
-      ['release_group.url', 'url.gid'],
-      ['track.url', 'url.gid'],
-      ['work.url', 'url.gid'],
       # core
       ['artist.area', 'area._id'],
       ['label.area', 'area._id'],
@@ -181,11 +190,13 @@ task :merge_n do
       ['label.ipi', 'label_ipi.label'],
       ['label.isni', 'label_isni.label'],
       ['medium.cdtoc', 'medium_cdtoc.medium'],
+      ['medium.track', 'track.medium'],
       ['recording.isrc', 'isrc.recording'],
       ['recording.track', 'track.recording'],
       ['place.alias', 'place_alias.place'],
       ['release.country', 'release_country.release'],
       ['release.label', 'release_label.release'],
+      ['release.medium', 'medium.release'],
       ['release.unknown_country', 'release_unknown_country.release'],
       ['release_group.secondary_type', 'release_group_secondary_type_join.release_group'],
       ['work.alias', 'work_alias.work'],
