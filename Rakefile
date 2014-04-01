@@ -236,9 +236,10 @@ namespace :metrics do
     end
   end
   task :bson do
+    paths = CORE_ENTITIES.collect{|entity| "dump/#{MONGO_DBNAME}/#{entity}.bson"}
     CORE_ENTITIES.each do |entity|
-      #sh "script/bson_metrics.rb dump/#{MONGO_DBNAME}/#{entity}.bson"
-      sh "../libbson/bson-metrics dump/#{MONGO_DBNAME}/#{entity}.bson"
+      #sh "script/bson_metrics.rb #{paths.join(' ')}"
+      sh "../libbson/bson-metrics #{paths.join(' ')}"
     end
   end
 end
