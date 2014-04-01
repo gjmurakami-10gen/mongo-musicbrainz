@@ -86,10 +86,13 @@ namespace :mongo do
     sh "mongod --dbpath #{MONGO_DBPATH} --port #{MONGOD_PORT} --fork --logpath #{MONGOD_LOGPATH}"
   end
   task :status do
-    sh "ps -fp #{file_to_s(MONGOD_LOCKPATH)}" if File.size?(MONGOD_LOCKPATH)
+    sh "ps -fp #{file_to_s(MONGOD_LOCKPATH)} || true" if File.size?(MONGOD_LOCKPATH)
   end
   task :stop do
     sh "kill #{file_to_s(MONGOD_LOCKPATH)}" if File.size?(MONGOD_LOCKPATH)
+  end
+  task :shell do
+    sh "mongo --port #{MONGOD_PORT} '#{MONGO_DBNAME}'"
   end
 end
 
