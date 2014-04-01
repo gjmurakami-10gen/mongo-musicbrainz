@@ -27,7 +27,16 @@ def ordered_group_by_first(pairs)
   pairs.inject([[], nil]) do |memo, pair|
     result, previous_value = memo
     current_value = pair.first
-    result << [current_value, []] if previous_value != current_value
+    if previous_value != current_value
+      if result.last && (obj = result.last.last)
+        if obj.first.is_a?(Hash)
+          obj.sort!{|a,b| a.first.last <=> b.first.last}
+        else
+          obj.sort!{|a,b| a <=> b}
+        end
+      end
+      result << [current_value, []]
+    end
     result.last.last << pair.last
     [result, current_value]
   end.first

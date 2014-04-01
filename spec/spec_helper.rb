@@ -19,3 +19,18 @@ $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), "..", "script"))
 require 'rspec'
 require 'parslet/rig/rspec'
 require 'parslet_sql'
+
+def load_fixture(db, fixture)
+  fixture.each do |collection_name, docs|
+    coll = db[collection_name]
+    coll.remove
+    coll.insert(docs)
+  end
+end
+
+def match_fixture(db, fixture)
+  fixture.each do |collection_name, docs|
+    coll = db[collection_name]
+    expect(coll.find({}, :sort => [["_id", 1]]).to_a).to eq(docs)
+  end
+end

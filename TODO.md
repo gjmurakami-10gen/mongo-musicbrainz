@@ -1,7 +1,13 @@
 # TO DO
 
-* bson_metrics - doc sizes - average, max
 * rspec tests for merge_1 and merge_n
+  * before
+  * shared examples
+  * sort sub-arrays for merge_n comparison
+* mongo shell rake task
+
+* rspec studying
+* --progress option
 * core merges
 * profile
 * mongo-c-driver mbdump_to_mongo
