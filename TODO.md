@@ -3,6 +3,15 @@
 * Combinator1 and CombinatorN split to fix rspec test interference
 * Rakefile task :all and associated reordering
 
+* merge_1.rb THRESHOLD hash_by_key fails with stack level too deep
+ * ./script/merge_1.rb:23: stack level too deep (SystemStackError)
+* merge_n.rb
+  * ./script/merge_n.rb:33:in `sort!': comparison of BSON::OrderedHash with BSON::OrderedHash failed (ArgumentError)
+
+* merge.rb to replace merge_1.rb and merge_n.rb
+* infer on or many from references
+* aggregation exploration
+* Rakefile desc
 * core merger review
 * submodules - musicbrainz-server libbson mongo-c-driver
 * topological sort optimization to replace repeated merges
