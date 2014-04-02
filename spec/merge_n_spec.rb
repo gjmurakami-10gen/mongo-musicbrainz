@@ -98,5 +98,6 @@ describe Mongo::CombinatorN do
     }
 
   end
+
 end
 

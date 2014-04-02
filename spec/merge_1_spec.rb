@@ -67,5 +67,6 @@ describe Mongo::Combinator1 do
     }
 
   end
+
 end
 

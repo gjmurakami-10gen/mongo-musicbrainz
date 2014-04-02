@@ -26,7 +26,7 @@ end
 module Mongo
   class Combinator1
     SLICE_SIZE = 20000
-    THRESHOLD = 100000
+    THRESHOLD = 80000 # 100000 fails in hash_by_key with stack level too deep (SystemStackError)
 
     def initialize(db, parent_name, parent_key, child_name, child_key)
       @parent_name = parent_name
