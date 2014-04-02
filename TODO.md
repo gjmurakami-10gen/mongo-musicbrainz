@@ -1,14 +1,24 @@
 # TO DO
 
+* Combinator1 and CombinatorN split to fix rspec test interference
+* Rakefile task :all and associated reordering
+
 * core merger review
+* submodules - musicbrainz-server libbson mongo-c-driver
 * topological sort optimization to replace repeated merges
 * rspec studying
+* optimize
+  * merge_1
+  * merge_n
+  * mbdump_to_mongo
 * merge improvements
   * multi-merge
   * --progress option
 * profile
 * mongo-c-driver mbdump_to_mongo
 * dbname in command line args
+* rake indexes
+* Advanced Relationships
 
 * mbdump update
   * CURRENT versus LATEST decoupling

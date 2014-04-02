@@ -48,26 +48,45 @@ def path_file_to_s(*args)
   File.join(*(args[0..-2] << file_to_s(File.join(*args))))
 end
 
+ORDERED_TASKS = %w[
+    latest
+    fetch
+    unarchive
+    cutover
+    metrics:wc_all
+    metrics:wc_core
+    references
+    mongo:start
+    mongo:status
+    spec
+    load_tables
+    indexes
+    merge_1
+    merge_n
+    metrics:dump
+    metrics:bson
+    mongo:stop
+]
+
 task :default do
   puts <<-EOF
   MONGODB_URI='#{MONGODB_URI}'
-  usage:
-    rake latest
-    rake fetch
-    rake unarchive
-    rake mongo:start
-    rake load_tables
-    rake merge_1 merge_n
-    rake cutover
-    rake mongo:start
-    rake mongo:shell
-    rake metrics:wc_all
-    rake metrics:wc_core
-    rake metrics:dump
-    rake metrics:bson
-    rake references
-    rake indexes
+  usage - initial:
+    rake -T # print rake tasks
+    rake all # all of the following
+  usage - individual:
+    #{ORDERED_TASKS.collect{|task| "rake #{task}"}.join("\n    ")}
   EOF
+end
+
+task :all do
+  log_file_name = 'rake_all.log'
+  sh "> #{log_file_name}"
+  puts "# run the following in another window for progress"
+  puts "tail -f #{log_file_name}"
+  ORDERED_TASKS.each do |task|
+    sh "(time rake #{task}) >> #{log_file_name} 2>&1"
+  end
 end
 
 file LATEST_FILE do |file|
@@ -92,7 +111,7 @@ end
 
 desc "unarchive"
 task :unarchive => LATEST_FILE do
-  mbdump_tar = File.join(FTP_LATEST_DIR, 'mbdump.tar.bz2')
+  mbdump_tar = File.join(File.absolute_path(FTP_LATEST_DIR), 'mbdump.tar.bz2')
   FileUtils.mkdir_p(DATA_LATEST_DIR)
   Dir.chdir(DATA_LATEST_DIR)
   sh "tar -xf '#{mbdump_tar}'"
@@ -114,8 +133,17 @@ namespace :mongo do
   end
 end
 
-$CreateTables_sql = "musicbrainz-server/admin/sql/CreateTables.sql"
-$CreateTables_sql = 'schema/CreateTables.sql'
+RSpec::Core::RakeTask.new(:spec)
+
+CORE_ENTITIES = %w(area artist label place recording release release_group url work)
+
+# https://github.com/metabrainz/musicbrainz-server
+# git clone --recursive https://github.com/metabrainz/musicbrainz-server.git
+$CreateTables_sql = "../musicbrainz-server/admin/sql/CreateTables.sql"
+$CreateTables_sql = 'schema/CreateTables.sql' # override - no sub-project yet for musicbrainz-server
+
+# PK - Primary Key index hint
+# references table.column - relation in comment
 
 file 'schema/create_tables.json' => [ $CreateTables_sql, 'lib/parslet_sql.rb' ] do |file|
   sql_text = IO.read($CreateTables_sql)
@@ -123,10 +151,55 @@ file 'schema/create_tables.json' => [ $CreateTables_sql, 'lib/parslet_sql.rb' ] 
   File.open(file.name, 'w') {|fio| fio.write(JSON.pretty_generate(m)) }
 end
 
+desc "print references from schema"
+task :references => 'schema/create_tables.json' do
+  JSON.parse(IO.read('schema/create_tables.json')).each do |sql|
+    if sql.has_key?('create_table')
+      create_table = sql['create_table']
+      table_name = create_table['table_name']
+      columns = create_table['columns']
+      columns.each do |column|
+        column_name = column['column_name']
+        comment = column['comment']
+        if comment =~ /references/
+          reference = comment[/references\s+([.\w]+)/,1] #comment[/references\s+([\w]+\.g?id)/,1]
+          raise "#{table_name}.#{column_name} #{comment}" if !reference && comment !~ /language|weakly|attribute_type|country_area/
+          puts "#{table_name}.#{column_name} references #{reference}"
+        end
+      end
+    end
+  end
+end
+
 desc "load_tables"
 task :load_tables => 'schema/create_tables.json' do
-  table_names = Dir["data/fullexport/#{file_to_s(LATEST_FILE)}/mbdump/*"].collect{|file_name| File.basename(file_name) }
+  table_names = Dir["data/fullexport/#{DB_TIME_ID}/mbdump/*"].collect{|file_name| File.basename(file_name) }
   sh "MONGODB_URI='#{MONGODB_URI}' time ./script/mbdump_to_mongo.rb #{table_names.join(' ')}"
+end
+
+desc "print indexes from schema - does not ensure indexes yet"
+task :indexes => 'schema/create_tables.json' do
+  #client = Mongo::MongoClient.from_uri(MONGODB_URI)
+  #db = client[MONGO_DBNAME]
+  JSON.parse(IO.read('schema/create_tables.json')).each do |sql|
+    if sql.has_key?('create_table')
+      create_table = sql['create_table']
+      table_name = create_table['table_name']
+      columns = create_table['columns']
+      columns.each do |column|
+        column_name = column['column_name']
+        comment = column['comment']
+        if comment =~ /PK/
+          #puts "table_name:#{table_name} column_name:#{column_name} comment:#{comment.inspect}"
+          column_name = '_id' if column_name == 'id'
+          puts "#{table_name}.#{column_name} PK"
+          #collection = db[table_name]
+          #collection.ensure_index(column_name => Mongo::ASCENDING)
+        end
+      end
+    end
+  end
+  client.close
 end
 
 desc "merge_enums" # running this shows that enums from the schema are not used
@@ -221,8 +294,6 @@ task :merge_n do
   end
 end
 
-CORE_ENTITIES = %w(area artist label place recording release release_group url work)
-
 namespace :metrics do
   task :wc_all do
     sh "cd #{DATA_LATEST_DIR}/mbdump && wc -l * | sort -nr"
@@ -244,50 +315,3 @@ namespace :metrics do
   end
 end
 
-# PK - Primary Key index hint
-# references table.column - relation in comment
-
-desc "print references from schema"
-task :references => 'schema/create_tables.json' do
-  JSON.parse(IO.read('schema/create_tables.json')).each do |sql|
-    if sql.has_key?('create_table')
-      create_table = sql['create_table']
-      table_name = create_table['table_name']
-      columns = create_table['columns']
-      columns.each do |column|
-        column_name = column['column_name']
-        comment = column['comment']
-        if comment =~ /references/
-          reference = comment[/references\s+([.\w]+)/,1] #comment[/references\s+([\w]+\.g?id)/,1]
-          raise "#{table_name}.#{column_name} #{comment}" if !reference && comment !~ /language|weakly|attribute_type|country_area/
-          puts "#{table_name}.#{column_name} references #{reference}"
-        end
-      end
-    end
-  end
-end
-
-desc "print indexes from schema - does not ensure indexes yet"
-task :indexes => 'schema/create_tables.json' do
-  client = Mongo::MongoClient.from_uri(MONGODB_URI)
-  db = client[MONGO_DBNAME]
-  JSON.parse(IO.read('schema/create_tables.json')).each do |sql|
-    if sql.has_key?('create_table')
-      create_table = sql['create_table']
-      table_name = create_table['table_name']
-      columns = create_table['columns']
-      columns.each do |column|
-        column_name = column['column_name']
-        comment = column['comment']
-        if comment =~ /PK/
-          #puts "table_name:#{table_name} column_name:#{column_name} comment:#{comment.inspect}"
-          column_name = '_id' if column_name == 'id'
-          puts "#{table_name}.#{column_name} PK"
-          #collection = db[table_name]
-          #collection.ensure_index(column_name => Mongo::ASCENDING)
-        end
-      end
-    end
-  end
-  client.close
-end

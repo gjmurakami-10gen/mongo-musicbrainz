@@ -11,8 +11,10 @@ We also hope that general-purpose tools for denomalization will emerge.
 # Installation
 
 ```
+\curl -sSL https://get.rvm.io | bash -s stable # install RVM - https://rvm.io/
+rvm install 2.1.1
+rvm --default use 2.1.1
 bundle install
-rspec
 rake
 ```
 

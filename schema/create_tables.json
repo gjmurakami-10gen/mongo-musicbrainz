@@ -1061,7 +1061,7 @@
         {
           "column_name": "language",
           "data_type": "INTEGER",
-          "comment": "-- references language\n    "
+          "comment": "-- references language.id\n    "
         },
         {
           "column_name": "quality",
@@ -1534,13 +1534,13 @@
           "column_name": "collection",
           "data_type": "INTEGER",
           "column_constraint": "NOT NULL",
-          "comment": "-- weakly references collection\n    "
+          "comment": "-- weakly references editor_collection.id\n    "
         },
         {
           "column_name": "last_edit_sent",
           "data_type": "INTEGER",
           "column_constraint": "NOT NULL",
-          "comment": "-- weakly references edit\n    "
+          "comment": "-- weakly references edit.id\n    "
         },
         {
           "column_name": "available",
@@ -1632,7 +1632,7 @@
           "column_name": "last_edit_sent",
           "data_type": "INTEGER",
           "column_constraint": "NOT NULL  ",
-          "comment": "-- weakly references edit\n"
+          "comment": "-- weakly references edit.id\n"
         }
       ]
     }
