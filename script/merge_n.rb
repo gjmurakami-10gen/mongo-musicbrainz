@@ -43,7 +43,7 @@ def ordered_group_by_first(pairs)
 end
 
 module Mongo
-  class Combinator
+  class CombinatorN
     SLICE_SIZE = 20000
     THRESHOLD = 1000000
 
@@ -131,7 +131,7 @@ if $0 == __FILE__
   mongo_client = Mongo::MongoClient.from_uri
   mongo_uri = Mongo::URIParser.new(ENV['MONGODB_URI'])
   db = mongo_client[mongo_uri.db_name]
-  combinator = Mongo::Combinator.new(db, parent_name, parent_key, child_name, child_key)
+  combinator = Mongo::CombinatorN.new(db, parent_name, parent_key, child_name, child_key)
 
   doc_count = 0
   bm = Benchmark.measure do

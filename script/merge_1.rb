@@ -24,7 +24,7 @@ def hash_by_key(a, key)
 end
 
 module Mongo
-  class Combinator
+  class Combinator1
     SLICE_SIZE = 20000
     THRESHOLD = 100000
 
@@ -105,7 +105,7 @@ if $0 == __FILE__
   mongo_client = Mongo::MongoClient.from_uri
   mongo_uri = Mongo::URIParser.new(ENV['MONGODB_URI'])
   db = mongo_client[mongo_uri.db_name]
-  combinator = Mongo::Combinator.new(db, parent_name, parent_key, child_name, child_key)
+  combinator = Mongo::Combinator1.new(db, parent_name, parent_key, child_name, child_key)
 
   doc_count = 0
   bm = Benchmark.measure do

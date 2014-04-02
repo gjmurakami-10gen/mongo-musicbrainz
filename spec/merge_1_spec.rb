@@ -15,19 +15,19 @@
 require_relative 'spec_helper'
 require 'merge_1'
 
-MONGODB_URI = 'mongodb://localhost:27017/test_merge_1'
-ENV['MONGODB_URI'] = MONGODB_URI
-MONGO_URI = Mongo::URIParser.new(ENV['MONGODB_URI'])
-DB_NAME = MONGO_URI.db_name
-
-describe Mongo::Combinator do
+describe Mongo::Combinator1 do
 
   context "combinator" do
 
     before(:each) do
+      @mongodb_uri = 'mongodb://localhost:27017/test_merge_1'
+      ENV['MONGODB_URI'] = @mongodb_uri
+      @mongo_uri = Mongo::URIParser.new(ENV['MONGODB_URI'])
+      @db_name = @mongo_uri.db_name
+
       @mongo_client = Mongo::MongoClient.from_uri
-      @db = @mongo_client[DB_NAME]
-      @combinator = Mongo::Combinator.new(@db, 'people', 'gender', 'gender', '_id')
+      @db = @mongo_client[@db_name]
+      @combinator = Mongo::Combinator1.new(@db, 'people', 'gender', 'gender', '_id')
       @data = {
           :before => {
               :people => [
@@ -52,6 +52,10 @@ describe Mongo::Combinator do
       load_fixture(@db, @data[:before])
     end
 
+    after(:each) do
+      @mongo_client.drop_database(@db_name)
+    end
+
     it("should merge child into parent") {
       @combinator.merge_1 # initial merge_1
       match_fixture(@db, @data[:after])
@@ -61,6 +65,7 @@ describe Mongo::Combinator do
       @combinator.merge_1 # re-run merge_1
       match_fixture(@db, @data[:after])
     }
+
   end
 end
 
