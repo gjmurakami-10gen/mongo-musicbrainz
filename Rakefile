@@ -60,9 +60,11 @@ ORDERED_TASKS = %w[
     mongo:status
     spec
     load_tables
+    metrics:mongo
     indexes
     merge_1
     merge_n
+    metrics:mongo
     metrics:dump
     metrics:bson
     mongo:stop
@@ -300,6 +302,13 @@ namespace :metrics do
   end
   task :wc_core do
     sh "cd #{DATA_LATEST_DIR}/mbdump && wc -l #{CORE_ENTITIES.join(' ')} | sort -nr"
+  end
+  task :mongo do
+    client = Mongo::MongoClient.from_uri(MONGODB_URI)
+    db = client[MONGO_DBNAME]
+    collection_names = (db.collection_names - ["system.indexes"]).sort
+    coll_stats = collection_names.collect{|collection_name| db.command({collStats: collection_name})}
+    puts JSON.pretty_generate(coll_stats)
   end
   task :dump do
     CORE_ENTITIES.each do |entity|
