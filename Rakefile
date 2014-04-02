@@ -229,7 +229,7 @@ task :merge_1 do
       ['release.packaging', 'release_packaging._id'],
       ['release.script', 'script._id'],
       ['release.status', 'release_status._id'],
-      ['release_country.country', 'country_area.area'],
+      ['release_country.country', 'country_area._id'],
       ['release_group.type', 'release_group_primary_type._id'],
       ['release_group_secondary_type_join.secondary_type', 'release_group_secondary_type._id'],
       ['script_language.language', 'language._id'],
