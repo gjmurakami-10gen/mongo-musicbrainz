@@ -1,14 +1,56 @@
 # TO DO
 
-* Combinator1 and CombinatorN split to fix rspec test interference
-* Rakefile task :all and associated reordering
-
-* merge_1.rb THRESHOLD hash_by_key fails with stack level too deep
- * ./script/merge_1.rb:23: stack level too deep (SystemStackError)
-* merge_n.rb
-  * ./script/merge_n.rb:33:in `sort!': comparison of BSON::OrderedHash with BSON::OrderedHash failed (ArgumentError)
-
 * merge.rb to replace merge_1.rb and merge_n.rb
+  * USAGE
+      usage: MONGODB_URI='mongodb://localhost:27017/database_name' #{$0} parent_collection merge_spec ...
+      where: merge_spec: merge_one_spec | merge_many_spec
+             merge_one_spec: foreign_key:child_collection.child_key
+               child_collection default foreign_key
+               child_key default parent_collection
+             merge_many_spec: key:[child_collection.foreign_key]
+               child_collection default key
+               foreign_key default parent_collection
+      examples:
+        area
+          type:area_type
+          area_alias:[]
+          place:[]
+          gid_redirect:[artist_gid_redirect.new_id]
+        area_alias
+          type:area_alias_type
+          alias:[area_alias]
+        artist
+          type:artist_type
+          gender
+          area
+          alias:[artist_alias]
+          credit_name:[artist_credit_name]
+          ipi:[artist_ipi]
+          isni:[artist_isni]
+          gid_redirect:[artist_gid_redirect.new_id]
+        country_area
+          area
+        label
+          type:label_type
+  * JSON
+    [
+      ["parent_collection",
+        [
+            {"merge" : "one", "to" : "foreign_key", "from" : "child_collection"},
+            {"merge" : "many", "to" : "parent_key", "from" : "child_collection"}
+        ]
+      ]
+    ]
+    [
+      ["area",
+        [
+            {"merge" : "one", "to" : "type", "from" : "area_type"},
+            {"merge" : "many", "from" : "area_alias.area"},
+            {"merge" : "many", "from" : "place.area"}
+        ]
+      ]
+    ]
+
 * infer on or many from references
 * aggregation exploration
 * Rakefile desc

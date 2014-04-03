@@ -23,14 +23,14 @@ def hash_by_key(a, key)
   Hash[*a.collect{|e| [e[key], e]}.flatten(1)]
 end
 
-def ordered_group_by_first(pairs)
+def ordered_group_by_first(pairs, child_key = nil)
   pairs.inject([[], nil]) do |memo, pair|
     result, previous_value = memo
     current_value = pair.first
     if previous_value != current_value
-      if result.last && (obj = result.last.last)
+      if child_key && result.last && (obj = result.last.last)
         if obj.first.is_a?(Hash)
-          obj.sort!{|a,b| a.first.last <=> b.first.last}
+          obj.sort!{|a,b| a[child_key] <=> b[child_key]}
         else
           obj.sort!{|a,b| a <=> b}
         end
@@ -140,7 +140,7 @@ module Mongo
                    end
       child_docs_by_key = child_docs.collect{|doc| [doc[@child_key], doc]}
       child_docs_by_key.sort!{|a,b| a.first <=> b.first}
-      child_groups = ordered_group_by_first(child_docs_by_key)
+      child_groups = ordered_group_by_first(child_docs_by_key) # no @child_key sort for now
       print "<#{child_docs.size}~#{child_groups.size}"
       child_groups
     end
