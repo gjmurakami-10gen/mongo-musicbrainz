@@ -17,6 +17,9 @@ require 'merge_n'
 
 describe Mongo::CombinatorN do
 
+  context "bson" do
+  end
+
   context "combinator" do
 
     before(:each) do
@@ -73,16 +76,30 @@ describe Mongo::CombinatorN do
       @mongo_client.drop_database(@db_name)
     end
 
+    it("should sort BSON::OrderedHash") {
+      a = [
+          BSON::OrderedHash["_id", BSON::ObjectId.new, "name", "Flopsy"],
+          BSON::OrderedHash["_id", BSON::ObjectId.new, "name", "Mopsy"],
+      ]
+      expect(a.sort!{|a,b| a.first.last <=> b.first.last}).to eq(a)
+    }
+
     it("should order group by first element") {
       pairs = [
-          ["cat", "Garfield"], ["cat", "Midnight"],
-          ["dog", "Snoopy"], ["dog", "Maramduke"],
-          ["rabbit", "Flopsy"], ["rabbit", "Mopsy"]
+          ["cat", {"_id" => 1, "name" => "Garfield"}],
+          ["cat", {"_id" => 2, "name" => "Midnight"}],
+          ["dog", {"_id" => 3, "name" => "Snoopy"}],
+          ["dog", {"_id" => 6, "name" => "Maramduke"}],
+          ["rabbit", {"_id" => 5, "name" => "Flopsy"}],
+          ["rabbit", {"_id" => 4, "name" => "Mopsy"}]
       ]
       result = [
-          ["cat", ["Garfield", "Midnight"]],
-          ["dog", ["Maramduke", "Snoopy"]],
-          ["rabbit", ["Flopsy", "Mopsy"]]
+          ["cat", [{"_id"=>1, "name"=>"Garfield"},
+                   {"_id"=>2, "name"=>"Midnight"}]],
+          ["dog", [{"_id"=>3, "name"=>"Snoopy"},
+                   {"_id"=>6, "name"=>"Maramduke"}]],
+          ["rabbit", [{"_id"=>5, "name"=>"Flopsy"},
+                      {"_id"=>4, "name"=>"Mopsy"}]]
       ]
       expect(ordered_group_by_first(pairs)).to eq(result)
     }

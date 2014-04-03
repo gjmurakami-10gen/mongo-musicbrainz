@@ -19,8 +19,12 @@ require 'json'
 require 'mongo'
 require 'benchmark'
 
-def hash_by_key(a, key)
-  Hash[*a.collect{|e| [e[key], e]}.flatten(1)]
+module BSON
+  class ObjectId
+    def <=> (other) #1 if self>other; 0 if self==other; -1 if self<other
+      self.data <=> other.data
+    end
+  end
 end
 
 def ordered_group_by_first(pairs)
