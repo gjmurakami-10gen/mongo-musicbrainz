@@ -15,6 +15,16 @@
 require_relative 'spec_helper'
 require 'merge'
 
+unless defined? Mongo::ObjectId.<=>
+  module BSON
+    class ObjectId
+      def <=> (other) #1 if self>other; 0 if self==other; -1 if self<other
+        self.data <=> other.data
+      end
+    end
+  end
+end
+
 describe Mongo::Combinator1 do
 
   context "combinator1" do
@@ -64,24 +74,6 @@ describe Mongo::Combinator1 do
       @combinator.merge_1 # initial merge_1
       @combinator.merge_1 # re-run merge_1
       match_fixture(@db, @data[:after])
-    }
-
-  end
-
-  context "ordered_group_by_first" do
-
-    it("should order group by first element") {
-      pairs = [
-          ["cat", "Garfield"], ["cat", "Midnight"],
-          ["dog", "Snoopy"], ["dog", "Maramduke"],
-          ["rabbit", "Flopsy"], ["rabbit", "Mopsy"]
-      ]
-      result = [
-          ["cat", ["Garfield", "Midnight"]],
-          ["dog", ["Maramduke", "Snoopy"]],
-          ["rabbit", ["Flopsy", "Mopsy"]]
-      ]
-      expect(ordered_group_by_first(pairs)).to eq(result)
     }
 
   end
@@ -141,6 +133,34 @@ describe Mongo::Combinator1 do
     after(:each) do
       @mongo_client.drop_database(@db_name)
     end
+
+    it("should sort BSON::OrderedHash") {
+      a = [
+          BSON::OrderedHash["_id", BSON::ObjectId.new, "name", "Flopsy"],
+          BSON::OrderedHash["_id", BSON::ObjectId.new, "name", "Mopsy"],
+      ]
+      expect(a.sort!{|a,b| a.first.last <=> b.first.last}).to eq(a)
+    }
+
+    it("should order group by first element") {
+      pairs = [
+          ["cat", {"_id" => 1, "name" => "Garfield"}],
+          ["cat", {"_id" => 2, "name" => "Midnight"}],
+          ["dog", {"_id" => 3, "name" => "Snoopy"}],
+          ["dog", {"_id" => 6, "name" => "Maramduke"}],
+          ["rabbit", {"_id" => 5, "name" => "Flopsy"}],
+          ["rabbit", {"_id" => 4, "name" => "Mopsy"}]
+      ]
+      result = [
+          ["cat", [{"_id"=>1, "name"=>"Garfield"},
+                   {"_id"=>2, "name"=>"Midnight"}]],
+          ["dog", [{"_id"=>3, "name"=>"Snoopy"},
+                   {"_id"=>6, "name"=>"Maramduke"}]],
+          ["rabbit", [{"_id"=>5, "name"=>"Flopsy"},
+                      {"_id"=>4, "name"=>"Mopsy"}]]
+      ]
+      expect(ordered_group_by_first(pairs, '_id')).to eq(result)
+    }
 
     it("should merge child into parent") {
       @combinator.merge_n # initial merge_n
