@@ -201,7 +201,7 @@ task :indexes => 'schema/create_tables.json' do
       end
     end
   end
-  client.close
+  #client.close
 end
 
 desc "merge_enums" # running this shows that enums from the schema are not used
