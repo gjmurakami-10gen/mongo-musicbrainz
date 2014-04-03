@@ -15,10 +15,17 @@
 require_relative 'spec_helper'
 require 'merge_n'
 
-describe Mongo::CombinatorN do
-
-  context "bson" do
+unless defined? Mongo::ObjectId.<=>
+  module BSON
+    class ObjectId
+      def <=> (other) #1 if self>other; 0 if self==other; -1 if self<other
+        self.data <=> other.data
+      end
+    end
   end
+end
+
+describe Mongo::CombinatorN do
 
   context "combinator" do
 
@@ -101,7 +108,7 @@ describe Mongo::CombinatorN do
           ["rabbit", [{"_id"=>5, "name"=>"Flopsy"},
                       {"_id"=>4, "name"=>"Mopsy"}]]
       ]
-      expect(ordered_group_by_first(pairs)).to eq(result)
+      expect(ordered_group_by_first(pairs, '_id')).to eq(result)
     }
 
     it("should merge child into parent") {
