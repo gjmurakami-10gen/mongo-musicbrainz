@@ -352,3 +352,12 @@ namespace :metrics do
   end
 end
 
+task :clobber do
+  if ENV['FORCE'] == 'REALLY_FORCE'
+    Rake::Task['mongo:stop'].execute
+    sh "rm -fr data dump rake_all.log"
+  else
+    puts "usage: rake FORCE=REALLY_FORCE clobber"
+  end
+end
+
