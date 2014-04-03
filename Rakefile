@@ -92,7 +92,7 @@ task :all do
 end
 
 file LATEST_FILE do |file|
-  sh "wget --recursive ftp://#{file.name}" # need --recursive to retrieve the new version
+  sh "wget --recursive --progress=dot:giga ftp://#{file.name}" # need --recursive to retrieve the new version
 end
 
 desc "latest"
