@@ -19,14 +19,25 @@ require 'json'
 require 'mongo'
 require 'benchmark'
 
-def hash_by_key(a, key)
-  Hash[*a.collect{|e| [e[key], e]}.flatten(1)]
+class Hash
+  def fetch_ary(key, default = nil)
+    if key.is_a?(Array)
+      val = fetch(key.first, default)
+      (val.is_a?(Hash) && key.length > 1) ? val.fetch_ary(key.drop(1), default) : val
+    else
+      fetch(key, default)
+    end
+  end
+end
+
+def hash_by_key_ary(a, key)
+  Hash[*a.collect{|e| [e.fetch_ary(key), e]}.flatten(1)]
 end
 
 module Mongo
   class Combinator1
     SLICE_SIZE = 20000
-    THRESHOLD = 80000 # 100000 fails in hash_by_key with stack level too deep (SystemStackError)
+    THRESHOLD = 80000 # 100000 fails in hash_by_key_ary with stack level too deep (SystemStackError)
 
     def initialize(db, parent_name, parent_key, child_name, child_key)
       @parent_name = parent_name
@@ -35,6 +46,8 @@ module Mongo
       puts "info: parent #{parent_name.inspect}, count: #{@parent_coll.count}"
       @child_name = child_name
       @child_key = child_key
+      @child_key_ary = @child_key.split('.', -1)
+      @child_key_ary = @child_key_ary.first if @child_key_ary.length == 1
       @child_coll = db[@child_name]
       @child_count = @child_coll.count
       puts "info: child #{@child_name.inspect}, count: #{@child_count}"
@@ -47,11 +60,11 @@ module Mongo
       child_docs = if @child_count <= THRESHOLD
                      @child_coll.find({@child_key => {'$ne' => nil}}).to_a
                    else
-                     keys = parent_docs.collect{|doc| val = doc[@parent_key]; val.is_a?(Hash) ? val[@child_key] : val }.sort.uniq
+                     keys = parent_docs.collect{|doc| val = doc[@parent_key]; val.is_a?(Hash) ? val.fetch_ary(@child_key_ary) : val }.sort.uniq
                      @child_coll.find({@child_key => {'$in' => keys}}).to_a
                    end
       print "<#{child_docs.count}"
-      @child_hash = hash_by_key(child_docs, @child_key)
+      @child_hash = hash_by_key_ary(child_docs, @child_key_ary)
     end
 
     def child_fetch(key, parent_docs)
@@ -68,7 +81,7 @@ module Mongo
       parent_docs.each do |doc|
         val = doc[@parent_key]
         next unless val
-        fk = val.is_a?(Hash) ? val[@child_key] : val
+        fk = val.is_a?(Hash) ? val.fetch_ary(@child_key_ary) : val
         abort("abort: #{$0} #{ARGV.join(' ')} - line:#{__LINE__} - expected child key #{@child_key.inspect} to reapply merge - val:#{val.inspect} - exit") unless fk
         child_doc = child_fetch(fk, parent_docs)
         puts("warning: #{$0} #{ARGV.join(' ')} - line:#{__LINE__} - unexpected fk:#{fk.inspect} - continuing") unless child_doc

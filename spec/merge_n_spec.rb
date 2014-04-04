@@ -115,6 +115,7 @@ describe Mongo::CombinatorN do
       @combinator.merge_n # initial merge_n
       match_fixture(@db, @data[:after])
     }
+
     it("should re-merge child into parent") {
       @combinator.merge_n # initial merge_n
       @combinator.merge_n # re-run merge_n

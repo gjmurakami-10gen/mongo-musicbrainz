@@ -15,6 +15,35 @@
 require_relative 'spec_helper'
 require 'merge_1'
 
+describe "#fetch_ary" do
+
+  it("should fetch via array of keys") {
+    hash = {a: 1, b: {c: 2, d: {e: 3, f: 4}, g: 5}, h: 6}
+    expect(hash.fetch_ary([:b, :d, :e])).to eq(3)
+    expect(hash.fetch_ary([:b, :d])).to eq({e: 3, f: 4})
+    expect(hash.fetch_ary([:b])).to eq({c: 2, d: {e: 3, f: 4}, g: 5})
+    expect(hash.fetch_ary([:a])).to eq(1)
+    expect(hash.fetch_ary([])).to eq(nil)
+    expect(hash.fetch_ary([:i])).to eq(nil)
+    expect(hash.fetch_ary([:i], [])).to eq([])
+  }
+
+  it("should fetch via symbol") {
+    hash = {a: 1, b: {c: 2, d: {e: 3, f: 4}, g: 5}, h: 6}
+    expect(hash.fetch(:a)).to eq(1)
+    expect(hash.fetch(:b)).to eq({c: 2, d: {e: 3, f: 4}, g: 5})
+    expect(hash.fetch(:h)).to eq(6)
+  }
+
+  it("should fetch via string") {
+    hash = {"a" => 1, "b" => {"c" => 2, "d" => {"e" => 3, "f" => 4}, "g" => 5}, "h" => 6}
+    expect(hash.fetch("a")).to eq(1)
+    expect(hash.fetch("b")).to eq({"c" => 2, "d" => {"e" => 3, "f" => 4}, "g" => 5})
+    expect(hash.fetch("h")).to eq(6)
+  }
+
+end
+
 describe Mongo::Combinator1 do
 
   context "combinator" do
@@ -60,12 +89,14 @@ describe Mongo::Combinator1 do
       @combinator.merge_1 # initial merge_1
       match_fixture(@db, @data[:after])
     }
+
     it("should re-merge child into parent") {
       @combinator.merge_1 # initial merge_1
       @combinator.merge_1 # re-run merge_1
       match_fixture(@db, @data[:after])
     }
 
+    #pending test for nested re-merge
   end
 
 end
