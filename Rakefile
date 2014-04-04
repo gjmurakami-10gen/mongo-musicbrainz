@@ -255,7 +255,7 @@ MERGE_SPEC = [
     ["1", "release.script", "script._id"],
     ["1", "release.status", "release_status._id"],
     ["n", "release.unknown_country", "release_unknown_country.release"],
-    ["1", "release_country.country", "country_area._id"],
+    ["1", "release_country.country", "country_area.area._id"], # join
     ["n", "release_group.gid_redirect", "release_group_gid_redirect.new_id"],
     ["n", "release_group.release", "release.release_group"],
     ["n", "release_group.secondary_type", "release_group_secondary_type_join.release_group"],
@@ -281,8 +281,8 @@ MERGE_SPEC = [
 task :merge_data_check do
   MERGE_SPEC.each do |spec|
     x, parent_spec, child_spec = spec
-    parent_collection, parent_key = parent_spec.split('.', -1)
-    child_collection, child_key = child_spec.split('.', -1)
+    parent_collection, parent_key = parent_spec.split('.', 2)
+    child_collection, child_key = child_spec.split('.', 2)
     composite_name = "#{parent_collection}_#{parent_key}"
     if x == '1'
       puts "warning: spec:#{spec.inspect} child_key:#{child_key.inspect} is not \"_id\"" if child_key != "_id"

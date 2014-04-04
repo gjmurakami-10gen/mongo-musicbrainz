@@ -128,8 +128,8 @@ end
 if $0 == __FILE__
   USAGE = "usage: MONGODB_URI='mongodb://localhost:27017/database_name' #{$0} parent.child_field_name child.foreign_key"
   abort(USAGE) if ARGV.size != 2
-  parent_name, parent_key = ARGV[0].split('.', -1)
-  child_name, child_key = ARGV[1].split('.', -1)
+  parent_name, parent_key = ARGV[0].split('.', 2)
+  child_name, child_key = ARGV[1].split('.', 2)
   abort(USAGE) unless parent_name && parent_key && child_name && child_key
 
   mongo_client = Mongo::MongoClient.from_uri

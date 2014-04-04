@@ -1,6 +1,12 @@
 # TO DO
 
-* merge.rb to replace merge_1.rb and merge_n.rb
+release_country.country country_area.area._id
+
+MONGODB_URI='mongodb://localhost:37017/musicbrainz' time ./script/merge_1.rb release_country.country country_area.area._id | head
+info: parent "release_country", count: 1031381
+info: child "country_area", count: 257
+info: progress: <257warning: ./script/merge_1.rb release_country.country country_area.area._id - line:74 - unexpected fk:107 - continuing - doc:{"_id"=>BSON::ObjectId('533df3f1a3f576487c34e7d2'), "country"=>107} @child_key:"area._id" @child_hash.first:[nil, {"_id"=>BSON::ObjectId('533de93ca3f576487c120902'), "area"=>{"_id"=>260, "gid"=>"c7d4543d-8f19-365c-a258-f1fe90ff7ac5", "name"=>"Sint Maarten (Dutch part)", "sort_name"=>"Sint Maarten (Dutch part)", "type"=>{"_id"=>1, "name"=>"Country"}, "edits_pending"=>0, "last_updated"=>2013-05-27 12:54:26 UTC, "ended"=>false, "comment"=>""}}]:* merge.rb to replace merge_1.rb and merge_n.rb
+
   * USAGE
       usage: MONGODB_URI='mongodb://localhost:27017/database_name' #{$0} parent_collection merge_spec ...
       where: merge_spec: merge_one_spec | merge_many_spec
