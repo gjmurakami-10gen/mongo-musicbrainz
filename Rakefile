@@ -62,8 +62,7 @@ ORDERED_TASKS = %w[
     load_tables
     metrics:mongo
     indexes
-    merge_1
-    merge_n
+    merge
     metrics:mongo
     metrics:dump
     metrics:bson
@@ -209,118 +208,106 @@ task :merge_enums => 'schema/create_tables.json' do
   sh "MONGODB_URI='#{MONGODB_URI}' time ./script/merge_enum_types.rb"
 end
 
-MERGE_1 = [
-    ['area.type', 'area_type._id'],
-    ['area_alias.type', 'area_alias_type._id'],
-    ['artist.type', 'artist_type._id'],
-    ['artist.gender', 'gender._id'],
-    ['artist_alias.type', 'artist_alias_type._id'],
-    ['artist_credit_name.artist_credit', 'artist_credit._id'],
-    ['country_area.area', 'area._id'],
-    ['label.type', 'label_type._id'],
-    ['label_alias.type', 'label_alias_type._id'],
-    ['medium.format', 'medium_format._id'],
-    ['medium_cdtoc.cdtoc', 'cdtoc._id'],
-    ['place.type', 'place_type._id'],
-    ['place_alias.type', 'place_alias_type._id'],
-    ['release.language', 'language._id'],
-    ['release.packaging', 'release_packaging._id'],
-    ['release.script', 'script._id'],
-    ['release.status', 'release_status._id'],
-    ['release_country.country', 'country_area._id'],
-    ['release_group.type', 'release_group_primary_type._id'],
-    ['release_group_secondary_type_join.secondary_type', 'release_group_secondary_type._id'],
-    ['script_language.language', 'language._id'],
-    ['script_language.script', 'script._id'],
-    #['track.medium', 'medium._id'], # instead ['medium.track', 'track.medium'], ['release.medium', 'medium.release'],
-    ['work.language', 'language._id'],
-    ['work.type', 'work_type._id'],
-    ['work_alias.type', 'work_alias_type._id'],
-    ['work_attribute_type_allowed_value.work_attribute_type', 'work_attribute_type._id'], # order before following
-    ['work_attribute.work_attribute_type', 'work_attribute_type._id'],
-    ['work_attribute.work_attribute_type_allowed_value', 'work_attribute_type_allowed_value._id'],
+MERGE_SPEC = [
+    ['1', 'area.type', 'area_type._id'],
+    ['1', 'area_alias.type', 'area_alias_type._id'],
+    ['1', 'artist.type', 'artist_type._id'],
+    ['1', 'artist.gender', 'gender._id'],
+    ['1', 'artist_alias.type', 'artist_alias_type._id'],
+    ['1', 'artist_credit_name.artist_credit', 'artist_credit._id'],
+    ['1', 'country_area.area', 'area._id'],
+    ['1', 'label.type', 'label_type._id'],
+    ['1', 'label_alias.type', 'label_alias_type._id'],
+    ['1', 'medium.format', 'medium_format._id'],
+    ['1', 'medium_cdtoc.cdtoc', 'cdtoc._id'],
+    ['1', 'place.type', 'place_type._id'],
+    ['1', 'place_alias.type', 'place_alias_type._id'],
+    ['1', 'release.language', 'language._id'],
+    ['1', 'release.packaging', 'release_packaging._id'],
+    ['1', 'release.script', 'script._id'],
+    ['1', 'release.status', 'release_status._id'],
+    ['1', 'release_country.country', 'country_area._id'],
+    ['1', 'release_group.type', 'release_group_primary_type._id'],
+    ['1', 'release_group_secondary_type_join.secondary_type', 'release_group_secondary_type._id'],
+    ['1', 'script_language.language', 'language._id'],
+    ['1', 'script_language.script', 'script._id'],
+    #['1', 'track.medium', 'medium._id'], # instead ['n', 'medium.track', 'track.medium'], ['n', 'release.medium', 'medium.release'],
+    ['1', 'work.language', 'language._id'],
+    ['1', 'work.type', 'work_type._id'],
+    ['1', 'work_alias.type', 'work_alias_type._id'],
+    ['1', 'work_attribute_type_allowed_value.work_attribute_type', 'work_attribute_type._id'], # order before following
+    ['1', 'work_attribute.work_attribute_type', 'work_attribute_type._id'],
+    ['1', 'work_attribute.work_attribute_type_allowed_value', 'work_attribute_type_allowed_value._id'],
     # core
-    ['artist.area', 'area._id'],
-    ['label.area', 'area._id'],
-    ['release_label.label', 'label._id']
-]
-
-desc "merge_1"
-task :merge_1 do
-  MERGE_1.each do |parent, child|
-    sh "MONGODB_URI='#{MONGODB_URI}' time ./script/merge_1.rb #{parent} #{child} || true"
-  end
-end
-
-MERGE_N = [
-    ['area.alias', 'area_alias.area'],
-    ['area.iso_3166_1', 'iso_3166_1.area'],
-    ['area.iso_3166_2', 'iso_3166_2.area'],
-    ['area.iso_3166_3', 'iso_3166_3.area'],
-    ['artist.alias', 'artist_alias.artist'],
-    ['artist.name', 'artist_credit_name.artist'],
-    ['artist.ipi', 'artist_ipi.artist'],
-    ['artist.isni', 'artist_isni.artist'],
-    ['label.alias', 'label_alias.label'],
-    ['label.ipi', 'label_ipi.label'],
-    ['label.isni', 'label_isni.label'],
-    ['medium.cdtoc', 'medium_cdtoc.medium'],
-    ['medium.track', 'track.medium'],
-    ['recording.isrc', 'isrc.recording'],
-    ['recording.track', 'track.recording'],
-    ['place.alias', 'place_alias.place'],
-    ['release.country', 'release_country.release'],
-    ['release.label', 'release_label.release'],
-    ['release.medium', 'medium.release'],
-    ['release.unknown_country', 'release_unknown_country.release'],
-    ['release_group.secondary_type', 'release_group_secondary_type_join.release_group'],
-    ['work.alias', 'work_alias.work'],
-    ['work.attribute', 'work_attribute.work'],
-    ['work.iswc', 'iswc.work'],
+    ['1', 'artist.area', 'area._id'],
+    ['1', 'label.area', 'area._id'],
+    ['1', 'release_label.label', 'label._id'],
+    #
+    ['n', 'area.alias', 'area_alias.area'],
+    ['n', 'area.iso_3166_1', 'iso_3166_1.area'],
+    ['n', 'area.iso_3166_2', 'iso_3166_2.area'],
+    ['n', 'area.iso_3166_3', 'iso_3166_3.area'],
+    ['n', 'artist.alias', 'artist_alias.artist'],
+    ['n', 'artist.name', 'artist_credit_name.artist'],
+    ['n', 'artist.ipi', 'artist_ipi.artist'],
+    ['n', 'artist.isni', 'artist_isni.artist'],
+    ['n', 'label.alias', 'label_alias.label'],
+    ['n', 'label.ipi', 'label_ipi.label'],
+    ['n', 'label.isni', 'label_isni.label'],
+    ['n', 'medium.cdtoc', 'medium_cdtoc.medium'],
+    ['n', 'medium.track', 'track.medium'],
+    ['n', 'recording.isrc', 'isrc.recording'],
+    ['n', 'recording.track', 'track.recording'],
+    ['n', 'place.alias', 'place_alias.place'],
+    ['n', 'release.country', 'release_country.release'],
+    ['n', 'release.label', 'release_label.release'],
+    ['n', 'release.medium', 'medium.release'],
+    ['n', 'release.unknown_country', 'release_unknown_country.release'],
+    ['n', 'release_group.secondary_type', 'release_group_secondary_type_join.release_group'],
+    ['n', 'work.alias', 'work_alias.work'],
+    ['n', 'work.attribute', 'work_attribute.work'],
+    ['n', 'work.iswc', 'iswc.work'],
     # gid_redirect by new_id
-    ['area.gid_redirect', 'area_gid_redirect.new_id'],
-    ['artist.gid_redirect', 'artist_gid_redirect.new_id'],
-    ['label.gid_redirect', 'label_gid_redirect.new_id'],
-    ['place.gid_redirect', 'place_gid_redirect.new_id'],
-    ['recording.gid_redirect', 'recording_gid_redirect.new_id'],
-    ['release.gid_redirect', 'release_gid_redirect.new_id'],
-    ['release_group.gid_redirect', 'release_group_gid_redirect.new_id'],
-    ['track.gid_redirect', 'track_gid_redirect.new_id'],
-    ['url.gid_redirect', 'url_gid_redirect.new_id'],
-    ['work.gid_redirect', 'work_gid_redirect.new_id'],
+    ['n', 'area.gid_redirect', 'area_gid_redirect.new_id'],
+    ['n', 'artist.gid_redirect', 'artist_gid_redirect.new_id'],
+    ['n', 'label.gid_redirect', 'label_gid_redirect.new_id'],
+    ['n', 'place.gid_redirect', 'place_gid_redirect.new_id'],
+    ['n', 'recording.gid_redirect', 'recording_gid_redirect.new_id'],
+    ['n', 'release.gid_redirect', 'release_gid_redirect.new_id'],
+    ['n', 'release_group.gid_redirect', 'release_group_gid_redirect.new_id'],
+    ['n', 'track.gid_redirect', 'track_gid_redirect.new_id'],
+    ['n', 'url.gid_redirect', 'url_gid_redirect.new_id'],
+    ['n', 'work.gid_redirect', 'work_gid_redirect.new_id'],
     # core
-    ['area.place', 'place.area'],
-    ['release_group.release', 'release.release_group']
+    ['n', 'area.place', 'place.area'],
+    ['n', 'release_group.release', 'release.release_group']
 ]
 
 task :merge_data_check do
-  MERGE_1.each do |parent_spec, child_spec|
-    parent_collection, foreign_key = parent_spec.split('.', -1)
-    child_collection, child_key = child_spec.split('.', -1)
-    spec = ["#{parent_collection}.#{foreign_key}", "#{child_collection}.#{child_key}"]
-    puts "warning: spec:#{spec.inspect} child_key:#{child_key.inspect} is not \"_id\"" if child_key != "_id"
-    composite_name = "#{parent_collection}_#{foreign_key}"
-    if foreign_key != child_collection && composite_name != child_collection
-      puts "warning: spec:#{spec.inspect} foreign_key:#{foreign_key.inspect} is not child_collection:#{child_collection.inspect}"
-    end
-  end
-  MERGE_N.each do |parent_spec, child_spec|
+  MERGE_SPEC.each do |spec|
+    x, parent_spec, child_spec = spec
     parent_collection, parent_key = parent_spec.split('.', -1)
-    child_collection, foreign_key = child_spec.split('.', -1)
-    spec = ["#{parent_collection}.#{parent_key}", "#{child_collection}.#{foreign_key}"]
-    puts "warning: spec:#{spec.inspect} parent_collection:#{parent_collection.inspect} is not foreign_key:#{foreign_key.inspect}" if parent_collection != foreign_key
+    child_collection, child_key = child_spec.split('.', -1)
     composite_name = "#{parent_collection}_#{parent_key}"
-    if parent_key != child_collection #&& composite_name != child_collection
-      puts "warning: spec:#{spec.inspect} parent_key:#{parent_key.inspect} is not child_collection:#{child_collection.inspect}"
+    if x == '1'
+      puts "warning: spec:#{spec.inspect} child_key:#{child_key.inspect} is not \"_id\"" if child_key != "_id"
+      if parent_key != child_collection && composite_name != child_collection
+        puts "warning: spec:#{spec.inspect} child_collection:#{child_collection.inspect} is not parent_key:#{parent_key.inspect}"
+      end
+    else
+      puts "warning: spec:#{spec.inspect} child_key:#{child_key.inspect} is not parent_collection:#{parent_collection.inspect}" if child_key != parent_collection
+      if parent_key != child_collection && composite_name != child_collection
+        puts "warning: spec:#{spec.inspect} parent_key:#{parent_key.inspect} is not child_collection:#{child_collection.inspect}"
+      end
+      puts "warning: spec:#{spec.inspect} parent_key:#{parent_key.inspect} includes parent_collection:#{parent_collection.inspect}" if parent_key.include? parent_collection
     end
-    puts "warning: spec:#{spec.inspect} parent_key:#{parent_key.inspect} includes parent_collection:#{parent_collection.inspect}" if parent_key.include? parent_collection
   end
 end
 
-desc "merge_n"
-task :merge_n do
-  MERGE_N.each do |parent, child|
-    sh "MONGODB_URI='#{MONGODB_URI}' time ./script/merge_n.rb #{parent} #{child} || true"
+desc "merge"
+task :merge do
+  MERGE_SPEC.each do |x, parent, child|
+    sh "MONGODB_URI='#{MONGODB_URI}' time ./script/merge_#{x}.rb #{parent} #{child} || true"
   end
 end
 
