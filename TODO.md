@@ -1,6 +1,7 @@
 # TO DO
 
 release_country.country country_area.area._id
+release_country.country area._id
 
 MONGODB_URI='mongodb://localhost:37017/musicbrainz' time ./script/merge_1.rb release_country.country country_area.area._id | head
 info: parent "release_country", count: 1031381
