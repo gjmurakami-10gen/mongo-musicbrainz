@@ -231,6 +231,52 @@ task :merge_data_check do
   end
 end
 
+def group_by_first(pairs)
+  pairs.inject([[], nil]) do |memo, pair|
+    result, previous_value = memo
+    current_value = pair.first
+    if previous_value != current_value
+      result << [current_value, []]
+    end
+    result.last.last << pair.last
+    [result, current_value]
+  end.first
+end
+
+task :merge_spec_group do
+  merge_spec_flat = JSON.parse(IO.read(MERGE_SPEC)).collect
+  merge_spec_with_group_key = merge_spec_flat.collect do |x, parent, child|
+    parent_collection = parent.split('.', 2).first
+    [parent_collection, [x, parent, child]]
+  end
+  merge_spec_group = group_by_first(merge_spec_with_group_key)
+  merge_spec = merge_spec_group.collect do |parent_collection, spec|
+    [
+        parent_collection,
+        spec.collect do |x, parent, child|
+          parent_name, parent_key = parent.split('.', 2)
+          child_name, child_key = child.split('.', 2)
+          if x == '1'
+            child_key = nil if child_key == '_id' # child_key default is '_id'
+            child_name = '' if child_name == parent_key # child_name defaut is parent_key
+            child_spec = [child_name, child_key].compact.join('.')
+            child_spec = nil if child_spec.empty?
+            [parent_key, child_spec].compact.join(':')
+          elsif x == 'n'
+            child_key = nil if child_key == parent_name # child_key default is parent_name
+            child_name = '' if child_name == parent_key # child_name defaut is parent_key
+            child_spec = [child_name, child_key].compact.join('.')
+            child_spec = nil if child_spec.empty?
+            [parent_key, "[#{child_spec}]"].compact.join(':')
+          else
+            raise "not reached"
+          end
+        end
+    ]
+  end
+  IO.write('spec/merge_spec_group.json', PP.pp(merge_spec, ""))
+end
+
 desc "merge"
 task :merge do
   JSON.parse(IO.read(MERGE_SPEC)).each do |x, parent, child|
