@@ -192,24 +192,61 @@ module Mongo
   end
 end
 
+RE_PARENT_KEY = '(?<parent_key>[^:]+)'
+RE_CHILD_COLLECTION = '(?<child_collection>[^.\\[\\]]*)?'
+RE_CHILD_KEY = '(?<child_key>[^\\[\\]]*)'
+
 if $0 == __FILE__
-  USAGE = "usage: MONGODB_URI='mongodb://localhost:27017/database_name' #{$0} parent.foreign_key child.primary_key"
-puts ARGV.join(' ')
-exit 0
-  abort(USAGE) if ARGV.size != 2
-  parent_name, parent_key = ARGV[0].split('.', 2)
-  child_name, child_key = ARGV[1].split('.', 2)
-  abort(USAGE) unless parent_name && parent_key && child_name && child_key
+  USAGE = <<-EOT.gsub('    ', '')
+    usage: MONGODB_URI='mongodb://localhost:27017/database_name' #{$0} parent_collection child_spec ...
+    where child_spec is parent_key:child_collection.child_key for one to one merge
+    with parent_key as default child_collection and '_id' as default child_key
+    or where child_spec is parent_key:[child_collection.child_key] for one to many merge
+    with parent_key as default child_collection and parent_collection as default child_key
+  EOT
+  abort(USAGE) if ARGV.size < 2
+  puts ARGV.join(' ')
+  parent_collection = ARGV.shift
+  exanded_child_specs = ARGV.collect do |child|
+    if (match_data = /^#{RE_PARENT_KEY}(:#{RE_CHILD_COLLECTION}(\.#{RE_CHILD_KEY})?)?$/.match(child))
+      parent_key = match_data[:parent_key]
+      child_collection = match_data[:child_collection] || parent_key
+      child_collection = parent_key if child_collection.empty?
+      child_key = match_data[:child_key] || '_id'
+      child_key = '_id' if child_key.empty?
+      [:one, parent_key, child_collection, child_key]
+    elsif (match_data = /^#{RE_PARENT_KEY}:\[#{RE_CHILD_COLLECTION}(\.#{RE_CHILD_KEY})?\]$/.match(child))
+      parent_key = match_data[:parent_key]
+      child_collection = match_data[:child_collection] || parent_key
+      child_collection = parent_key if child_collection.empty?
+      child_key = match_data[:child_key] || parent_collection
+      child_key = parent_collection if child_key.empty?
+      [:many, parent_key, child_collection, child_key]
+    else
+      raise "unrecognized merge spec:#{child.inspect}"
+    end
+  end
 
   mongo_client = Mongo::MongoClient.from_uri
   mongo_uri = Mongo::URIParser.new(ENV['MONGODB_URI'])
   db = mongo_client[mongo_uri.db_name]
-  combinator = Mongo::Combinator1.new(db, parent_name, parent_key, child_name, child_key)
 
-  doc_count = 0
-  bm = Benchmark.measure do
-    doc_count = combinator.merge_1
+  exanded_child_specs.each do |x, parent_key, child_collection, child_key|
+    p [x, parent_key, child_collection, child_key]
+    doc_count = 0
+    bm = Benchmark.measure do
+      if x == :one
+        combinator = Mongo::Combinator1.new(db, parent_collection, parent_key, child_collection, child_key)
+        doc_count = combinator.merge_1
+      elsif x == :many
+        combinator = Mongo::CombinatorN.new(db, parent_collection, parent_key, child_collection, child_key)
+        doc_count = combinator.merge_n
+      else
+        raise "not reached"
+      end
+    end
+    puts "info: real: #{'%.2f' % bm.real}, user: #{'%.2f' % bm.utime}, system:#{'%.2f' % bm.stime}, docs_per_sec: #{(doc_count.to_f/[bm.real, 0.000001].max).round}"
   end
-  puts "info: real: #{'%.2f' % bm.real}, user: #{'%.2f' % bm.utime}, system:#{'%.2f' % bm.stime}, docs_per_sec: #{(doc_count.to_f/[bm.real, 0.000001].max).round}"
+
   mongo_client.close
 end

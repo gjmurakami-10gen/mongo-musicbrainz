@@ -288,7 +288,7 @@ namespace :merge do
         #puts "child:#{child.inspect} child_collection:#{child_collection.inspect}"
         child_collection.to_sym
       else
-        raise "spec child:#{child.inspect}"
+        raise "unrecognized merge spec:#{child.inspect}"
       end
     end
     task parent_collection.to_sym => dependencies do
@@ -339,9 +339,8 @@ end
 task :clobber do
   if ENV['FORCE'] == 'REALLY_FORCE'
     Rake::Task['mongo:stop'].execute
-    sh "rm -fr data dump rake_all.log"
+    sh "rm -fr data dump log/* rake_all.log"
   else
     puts "usage: rake FORCE=REALLY_FORCE clobber"
   end
 end
-
