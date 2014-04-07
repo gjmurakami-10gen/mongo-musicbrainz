@@ -244,7 +244,7 @@ def group_by_first(pairs)
 end
 
 task :merge_spec_group do
-  merge_spec_flat = JSON.parse(IO.read(MERGE_SPEC)).collect
+  merge_spec_flat = JSON.parse(IO.read(MERGE_SPEC))
   merge_spec_with_group_key = merge_spec_flat.collect do |x, parent, child|
     parent_collection = parent.split('.', 2).first
     [parent_collection, [x, parent, child]]
@@ -274,7 +274,31 @@ task :merge_spec_group do
         end
     ]
   end
-  IO.write('spec/merge_spec_group.json', PP.pp(merge_spec, ""))
+  pp merge_spec #IO.write('spec/merge_spec_group.json', PP.pp(merge_spec, ""))
+end
+
+namespace :merge do
+  spec_group = JSON.parse(IO.read('spec/merge_spec_group.json'))
+  spec_group.each do |parent_collection, children|
+    dependencies = children.collect do |child|
+      if (match_data = /^(?<parent_key>[^:]+)(:\[?(?<child_collection>[^.\]]*))?/.match(child))
+        parent_key = match_data[:parent_key]
+        child_collection = match_data[:child_collection] || parent_key
+        child_collection = parent_key if child_collection.empty?
+        #puts "child:#{child.inspect} child_collection:#{child_collection.inspect}"
+        child_collection.to_sym
+      else
+        raise "spec child:#{child.inspect}"
+      end
+    end
+    task parent_collection.to_sym => dependencies do
+      sh "(time script/merge.rb #{parent_collection} #{children.join(' ')}) > log/merge_#{parent_collection} 2>&1"
+    end
+  end
+  task :all => spec_group.collect{|spec|spec.first}
+  rule /.*/ do |task|
+    #puts "rule: #{task.name}"
+  end
 end
 
 desc "merge"

@@ -194,6 +194,8 @@ end
 
 if $0 == __FILE__
   USAGE = "usage: MONGODB_URI='mongodb://localhost:27017/database_name' #{$0} parent.foreign_key child.primary_key"
+puts ARGV.join(' ')
+exit 0
   abort(USAGE) if ARGV.size != 2
   parent_name, parent_key = ARGV[0].split('.', 2)
   child_name, child_key = ARGV[1].split('.', 2)
