@@ -64,7 +64,7 @@ ORDERED_TASKS = %w[
     load_tables
     metrics:mongo
     indexes
-    merge
+    merge:all
     metrics:mongo
     metrics:dump
     metrics:bson
@@ -292,7 +292,7 @@ namespace :merge do
       end
     end
     task parent_collection.to_sym => dependencies do
-      sh "(time script/merge.rb #{parent_collection} #{children.join(' ')}) > log/merge_#{parent_collection} 2>&1"
+      sh "(time script/merge.rb #{parent_collection} #{children.join(' ')}) #> log/merge_#{parent_collection} 2>&1"
     end
   end
   task :all => spec_group.collect{|spec|spec.first}

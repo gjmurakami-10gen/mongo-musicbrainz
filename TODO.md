@@ -34,29 +34,10 @@
           area
         label
           type:label_type
-  * JSON
-    [
-      ["parent_collection",
-        [
-            {"merge" : "one", "to" : "foreign_key", "from" : "child_collection"},
-            {"merge" : "many", "to" : "parent_key", "from" : "child_collection"}
-        ]
-      ]
-    ]
-    [
-      ["area",
-        [
-            {"merge" : "one", "to" : "type", "from" : "area_type"},
-            {"merge" : "many", "from" : "area_alias.area"},
-            {"merge" : "many", "from" : "place.area"}
-        ]
-      ]
-    ]
 
-* infer on or many from references
 * aggregation exploration
 * Rakefile desc
-* core merger review
+* musicbrainz core tables merger review
 * submodules - musicbrainz-server libbson mongo-c-driver
 * topological sort optimization to replace repeated merges
 * rspec studying
@@ -67,6 +48,7 @@
 * merge improvements
   * multi-merge
   * --progress option
+  * parallel merge
 * profile
 * mongo-c-driver mbdump_to_mongo
 * dbname in command line args
