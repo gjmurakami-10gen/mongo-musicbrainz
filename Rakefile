@@ -85,12 +85,13 @@ end
 
 task :all do
   log_file_name = 'rake_all.log'
-  sh "> #{log_file_name}"
+  sh "date > #{log_file_name}"
   puts "# run the following in another window for progress"
   puts "tail -f #{log_file_name}"
   ORDERED_TASKS.each do |task|
     sh "(time rake #{task}) >> #{log_file_name} 2>&1"
   end
+  sh "date >> #{log_file_name}"
 end
 
 file LATEST_FILE do |file|
