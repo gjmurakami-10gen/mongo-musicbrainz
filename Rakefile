@@ -32,7 +32,8 @@ CURRENT_FILE = "CURRENT"
 LATEST = file_to_s(LATEST_FILE)
 DB_TIME_ID = ENV['DB_TIME_ID'] || file_to_s(CURRENT_FILE) || LATEST
 FTP_LATEST_DIR = "#{FTP_FULLEXPORT_DIR}/#{LATEST}"
-DATA_LATEST_DIR = "data/fullexport/#{LATEST}"
+FULLEXPORT_LATEST_DIR = "data/fullexport/#{LATEST}"
+DUMP_LATEST_DIR = "data/dump/#{LATEST}"
 
 MONGO_DBPATH = "data/db/#{DB_TIME_ID}"
 MONGOD_PORT = 37017
@@ -115,8 +116,8 @@ end
 desc "unarchive"
 task :unarchive => LATEST_FILE do
   mbdump_tar = File.join(File.absolute_path(FTP_LATEST_DIR), 'mbdump.tar.bz2')
-  FileUtils.mkdir_p(DATA_LATEST_DIR)
-  Dir.chdir(DATA_LATEST_DIR)
+  FileUtils.mkdir_p(FULLEXPORT_LATEST_DIR)
+  Dir.chdir(FULLEXPORT_LATEST_DIR)
   sh "tar -xf '#{mbdump_tar}'"
 end
 
@@ -310,10 +311,10 @@ end
 
 namespace :metrics do
   task :wc_all do
-    sh "cd #{DATA_LATEST_DIR}/mbdump && wc -l * | sort -nr"
+    sh "cd #{FULLEXPORT_LATEST_DIR}/mbdump && wc -l * | sort -nr"
   end
   task :wc_core do
-    sh "cd #{DATA_LATEST_DIR}/mbdump && wc -l #{CORE_ENTITIES.join(' ')} | sort -nr"
+    sh "cd #{FULLEXPORT_LATEST_DIR}/mbdump && wc -l #{CORE_ENTITIES.join(' ')} | sort -nr"
   end
   task :mongo do
     client = Mongo::MongoClient.from_uri(MONGODB_URI)
@@ -323,12 +324,14 @@ namespace :metrics do
     puts JSON.pretty_generate(coll_stats)
   end
   task :dump do
+    FileUtils.mkdir_p(DUMP_LATEST_DIR)
+    Dir.chdir(DUMP_LATEST_DIR)
     CORE_ENTITIES.each do |entity|
       sh "mongodump --port #{MONGOD_PORT} -d #{MONGO_DBNAME} -c #{entity}"
     end
   end
   task :bson do
-    paths = CORE_ENTITIES.collect{|entity| "dump/#{MONGO_DBNAME}/#{entity}.bson"}
+    paths = CORE_ENTITIES.collect{|entity| "#{DUMP_LATEST_DIR}/dump/#{MONGO_DBNAME}/#{entity}.bson"}
     CORE_ENTITIES.each do |entity|
       #sh "script/bson_metrics.rb #{paths.join(' ')}"
       sh "../libbson/bson-metrics #{paths.join(' ')}"
@@ -339,7 +342,7 @@ end
 task :clobber do
   if ENV['FORCE'] == 'REALLY_FORCE'
     Rake::Task['mongo:stop'].execute
-    sh "rm -fr data dump log/* rake_all.log"
+    sh "rm -fr data log/* rake_all.log"
   else
     puts "usage: rake FORCE=REALLY_FORCE clobber"
   end
