@@ -51,7 +51,7 @@ def path_file_to_s(*args)
   File.join(*(args[0..-2] << file_to_s(File.join(*args))))
 end
 
-ORDERED_TASKS = %w[
+FETCH_TASKS = %w[
     latest
     fetch
     unarchive
@@ -59,6 +59,9 @@ ORDERED_TASKS = %w[
     metrics:wc_all
     metrics:wc_core
     references
+]
+
+DB_TASKS = %w[
     mongo:start
     mongo:status
     spec
@@ -72,6 +75,8 @@ ORDERED_TASKS = %w[
     mongo:stop
 ]
 
+ORDERED_TASKS = FETCH_TASKS + DB_TASKS
+
 task :default do
   puts <<-EOF
   MONGODB_URI='#{MONGODB_URI}'
@@ -81,6 +86,28 @@ task :default do
   usage - individual:
     #{ORDERED_TASKS.collect{|task| "rake #{task}"}.join("\n    ")}
   EOF
+end
+
+task :fetch_all do
+  log_file_name = 'rake_fetch_all.log'
+  sh "date > #{log_file_name}"
+  puts "# run the following in another window for progress"
+  puts "tail -f #{log_file_name}"
+  FETCH_TASKS.each do |task|
+    sh "(time rake #{task}) >> #{log_file_name} 2>&1"
+  end
+  sh "date >> #{log_file_name}"
+end
+
+task :db_all do
+  log_file_name = 'rake_db_all.log'
+  sh "date > #{log_file_name}"
+  puts "# run the following in another window for progress"
+  puts "tail -f #{log_file_name}"
+  DB_TASKS.each do |task|
+    sh "(time rake #{task}) >> #{log_file_name} 2>&1"
+  end
+  sh "date >> #{log_file_name}"
 end
 
 task :all do
