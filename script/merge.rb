@@ -103,7 +103,7 @@ module Mongo
     def merge_1
       doc_count = 0
       print "info: progress: "
-      @parent_coll.find({@parent_key => {'$ne' => nil}}, :fields => {'_id' => 1, @parent_key => 1}).each_slice(SLICE_SIZE) do |parent_docs|
+      @parent_coll.find({@parent_key => {'$ne' => nil}}, :fields => {'_id' => 1, @parent_key => 1}, :timeout => false).each_slice(SLICE_SIZE) do |parent_docs|
         doc_count += parent_docs.size
         merge_1_batch(parent_docs)
         putc('.')
@@ -165,7 +165,7 @@ module Mongo
 
     def merge_n_big
       doc_count = 0
-      @parent_coll.find({}, :fields => {'_id' => 1}).each_slice(SLICE_SIZE) do |parent_docs|
+      @parent_coll.find({}, :fields => {'_id' => 1}, :timeout => false).each_slice(SLICE_SIZE) do |parent_docs|
         doc_count += parent_docs.size
         child_groups = load_child_groups(parent_docs)
         merge_n_batch(child_groups)
