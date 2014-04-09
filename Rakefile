@@ -61,7 +61,6 @@ ORDERED_TASKS = %w[
     references
     mongo:start
     mongo:status
-    spec
     load_tables
     metrics:mongo
     indexes
@@ -294,7 +293,7 @@ namespace :merge do
       end
     end
     task parent_collection.to_sym => dependencies do
-      sh "(time script/merge.rb #{parent_collection} #{children.join(' ')}) #> log/merge_#{parent_collection} 2>&1"
+      sh "(MONGODB_URI='#{MONGODB_URI}' time script/merge.rb #{parent_collection} #{children.join(' ')}) #> log/merge_#{parent_collection} 2>&1"
     end
   end
   task :all => spec_group.collect{|spec|spec.first}

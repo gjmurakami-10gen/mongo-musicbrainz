@@ -34,7 +34,7 @@ def hash_by_key_ary(a, key)
   Hash[*a.collect{|e| [e.fetch_ary(key), e]}.flatten(1)]
 end
 
-module Mongo
+module MongoMerge
   class Combinator1
     SLICE_SIZE = 20000
     THRESHOLD = 80000 # 100000 fails in hash_by_key_ary with stack level too deep (SystemStackError)
@@ -118,7 +118,7 @@ if $0 == __FILE__
   mongo_client = Mongo::MongoClient.from_uri
   mongo_uri = Mongo::URIParser.new(ENV['MONGODB_URI'])
   db = mongo_client[mongo_uri.db_name]
-  combinator = Mongo::Combinator1.new(db, parent_name, parent_key, child_name, child_key)
+  combinator = MongoMerge::Combinator1.new(db, parent_name, parent_key, child_name, child_key)
 
   doc_count = 0
   bm = Benchmark.measure do

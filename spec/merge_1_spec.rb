@@ -44,7 +44,7 @@ describe "#fetch_ary" do
 
 end
 
-describe Mongo::Combinator1 do
+describe MongoMerge::Combinator1 do
 
   context "combinator" do
 
@@ -56,7 +56,7 @@ describe Mongo::Combinator1 do
 
       @mongo_client = Mongo::MongoClient.from_uri
       @db = @mongo_client[@db_name]
-      @combinator = Mongo::Combinator1.new(@db, 'people', 'gender', 'gender', '_id')
+      @combinator = MongoMerge::Combinator1.new(@db, 'people', 'gender', 'gender', '_id')
       @data = {
           :before => {
               :people => [

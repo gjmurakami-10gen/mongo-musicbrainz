@@ -42,7 +42,51 @@ def ordered_group_by_first(pairs, child_key = nil)
   end.first
 end
 
-module Mongo
+module MongoMerge
+  class Child
+    attr_reader :child_count
+
+    def initialize(db, child_name, child_key)
+      @child_name = child_name
+      @child_key = child_key
+      @child_coll = db[@child_name]
+      @child_count = @child_coll.count
+      puts "info: child #{@child_name.inspect}, count: #{@child_count}"
+      @child_coll.ensure_index(child_key => Mongo::ASCENDING)
+    end
+  end
+
+  class Child1 < Child
+    THRESHOLD = 80000 # 100000 fails in hash_by_key with stack level too deep (SystemStackError)
+
+    attr_reader :child_key
+
+    def initialize(db, child_name, child_key)
+      super
+      @child_hash = Hash.new
+      @parent_docs_fetched = nil
+    end
+
+    def load_child_hash(parent_docs, parent_key)
+      child_docs = if @child_count <= THRESHOLD
+                     @child_coll.find({@child_key => {'$ne' => nil}}).to_a
+                   else
+                     keys = parent_docs.collect{|doc| val = doc[parent_key]; val.is_a?(Hash) ? val[@child_key] : val }.sort.uniq
+                     @child_coll.find({@child_key => {'$in' => keys}}).to_a
+                   end
+      print "<#{child_docs.count}"
+      @child_hash = hash_by_key(child_docs, @child_key)
+    end
+
+    def child_fetch(key, parent_docs, parent_key)
+      doc = @child_hash[key]
+      return doc if doc || parent_docs == @parent_docs_fetched
+      load_child_hash(parent_docs, parent_key)
+      @parent_docs_fetched = parent_docs
+      @child_hash[key]
+    end
+  end
+
   class Combinator1
     SLICE_SIZE = 20000
     THRESHOLD = 80000 # 100000 fails in hash_by_key with stack level too deep (SystemStackError)
@@ -52,34 +96,8 @@ module Mongo
       @parent_key = parent_key
       @parent_coll = db[@parent_name]
       puts "info: parent #{parent_name.inspect}, count: #{@parent_coll.count}"
-      @child_name = child_name
-      @child_key = child_key
-      @child_coll = db[@child_name]
-      @child_count = @child_coll.count
-      puts "info: child #{@child_name.inspect}, count: #{@child_count}"
-      @child_coll.ensure_index(child_key => Mongo::ASCENDING)
 
-      @child_hash = Hash.new
-      @parent_docs_fetched = nil
-    end
-
-    def load_child_hash(parent_docs)
-      child_docs = if @child_count <= THRESHOLD
-                     @child_coll.find({@child_key => {'$ne' => nil}}).to_a
-                   else
-                     keys = parent_docs.collect{|doc| val = doc[@parent_key]; val.is_a?(Hash) ? val[@child_key] : val }.sort.uniq
-                     @child_coll.find({@child_key => {'$in' => keys}}).to_a
-                   end
-      print "<#{child_docs.count}"
-      @child_hash = hash_by_key(child_docs, @child_key)
-    end
-
-    def child_fetch(key, parent_docs)
-      doc = @child_hash[key]
-      return doc if doc || parent_docs == @parent_docs_fetched
-      load_child_hash(parent_docs)
-      @parent_docs_fetched = parent_docs
-      @child_hash[key]
+      @child = Child1.new(db, child_name, child_key)
     end
 
     def merge_1_batch(parent_docs)
@@ -88,9 +106,9 @@ module Mongo
       parent_docs.each do |doc|
         val = doc[@parent_key]
         next unless val
-        fk = val.is_a?(Hash) ? val[@child_key] : val
-        abort("abort: #{$0} #{ARGV.join(' ')} - line:#{__LINE__} - expected child key #{@child_key.inspect} to reapply merge - val:#{val.inspect} - exit") unless fk
-        child_doc = child_fetch(fk, parent_docs)
+        fk = val.is_a?(Hash) ? val[@child.child_key] : val
+        abort("abort: #{$0} #{ARGV.join(' ')} - line:#{__LINE__} - expected child key #{@child.child_key.inspect} to reapply merge - val:#{val.inspect} - exit") unless fk
+        child_doc = @child.child_fetch(fk, parent_docs, @parent_key)
         puts("warning: #{$0} #{ARGV.join(' ')} - line:#{__LINE__} - unexpected fk:#{fk.inspect} - continuing") unless child_doc
         next unless child_doc
         bulk.find({'_id' => doc['_id']}).update_one({'$set' => {@parent_key => child_doc}})
@@ -100,10 +118,10 @@ module Mongo
       print ">#{count}"
     end
 
-    def merge_1
+    def merge_1(query = {@parent_key => {'$ne' => nil}}, fields = {'_id' => 1, @parent_key => 1})
       doc_count = 0
       print "info: progress: "
-      @parent_coll.find({@parent_key => {'$ne' => nil}}, :fields => {'_id' => 1, @parent_key => 1}).each_slice(SLICE_SIZE) do |parent_docs|
+      @parent_coll.find(query, :fields => fields).each_slice(SLICE_SIZE) do |parent_docs|
         doc_count += parent_docs.size
         merge_1_batch(parent_docs)
         putc('.')
@@ -114,21 +132,11 @@ module Mongo
     end
   end
 
-  class CombinatorN
-    SLICE_SIZE = 20000
+  class ChildN < Child
     THRESHOLD = 1000000
 
-    def initialize(db, parent_name, parent_key, child_name, child_key)
-      @parent_name = parent_name
-      @parent_key = parent_key
-      @parent_coll = db[@parent_name]
-      puts "info: parent #{parent_name.inspect}, count: #{@parent_coll.count}"
-      @child_name = child_name
-      @child_key = child_key
-      @child_coll = db[@child_name]
-      @child_count = @child_coll.count
-      puts "info: child #{@child_name.inspect}, count: #{@child_count}"
-      @child_coll.ensure_index(child_key => Mongo::ASCENDING)
+    def initialize(db, child_name, child_key)
+      super
     end
 
     def load_child_groups(parent_docs = nil)
@@ -144,8 +152,23 @@ module Mongo
       print "<#{child_docs.size}~#{child_groups.size}"
       child_groups
     end
+  end
 
-    def merge_n_batch(child_groups)
+  class CombinatorN
+    SLICE_SIZE = 20000
+    THRESHOLD = 1000000
+
+    def initialize(db, parent_name, parent_key, child_name, child_key)
+      @parent_name = parent_name
+      @parent_key = parent_key
+      @parent_coll = db[@parent_name]
+      puts "info: parent #{parent_name.inspect}, count: #{@parent_coll.count}"
+
+      @child = ChildN.new(db, child_name, child_key)
+    end
+
+    def merge_n_batch(parent_docs = nil)
+      child_groups = @child.load_child_groups(parent_docs)
       count = 0
       bulk = @parent_coll.initialize_unordered_bulk_op
       child_groups.each do |group|
@@ -155,38 +178,38 @@ module Mongo
       end
       bulk.execute if count > 0
       print ">#{count}"
-    end
-
-    def merge_n_small
-      child_groups = load_child_groups
-      merge_n_batch(child_groups)
       child_groups.size
     end
 
-    def merge_n_big
+    def merge_n_small
+      print "info: progress: "
+      size = merge_n_batch
+      puts
+      size
+    end
+
+    def merge_n_big(query, fields)
       doc_count = 0
-      @parent_coll.find({}, :fields => {'_id' => 1}).each_slice(SLICE_SIZE) do |parent_docs|
+      print "info: progress: "
+      @parent_coll.find(query, :fields => fields).each_slice(SLICE_SIZE) do |parent_docs|
         doc_count += parent_docs.size
-        child_groups = load_child_groups(parent_docs)
-        merge_n_batch(child_groups)
+        merge_n_batch(parent_docs)
         putc('.')
         STDOUT.flush
       end
+      puts
       doc_count
     end
 
-    def merge_n
+    def merge_n(query = {}, fields = {'_id' => 1})
       doc_count = 0
-      if @child_count <= THRESHOLD
+      if @child.child_count <= THRESHOLD
         puts "info: under THRESHOLD #{THRESHOLD}"
-        print "info: progress: "
         doc_count = merge_n_small
       else
         puts "info: over THRESHOLD #{THRESHOLD}"
-        print "info: progress: "
-        doc_count = merge_n_big
+        doc_count = merge_n_big(query, fields)
       end
-      puts
       doc_count
     end
   end
@@ -231,15 +254,24 @@ if $0 == __FILE__
   mongo_uri = Mongo::URIParser.new(ENV['MONGODB_URI'])
   db = mongo_client[mongo_uri.db_name]
 
+  query_one_keys = exanded_child_specs
+    .select{|spec| spec.first == :one}
+    .collect{|x, parent_key, child_collection, child_key| parent_key}
+  query_many = exanded_child_specs.any?{|spec| spec.first == :many}
+  query = query_many ? {} : Hash[*query_one_keys.collect{|key| [key, {'ne' => nil}]}.flatten]
+  puts "query:#{query.inspect}"
+  fields = Hash[*(['_id'] + query_one_keys).collect{|key| [key, 1]}.flatten]
+  puts "fields:#{fields.inspect}"
+
   exanded_child_specs.each do |x, parent_key, child_collection, child_key|
-    p [x, parent_key, child_collection, child_key]
+    p [parent_collection, x, parent_key, child_collection, child_key]
     doc_count = 0
     bm = Benchmark.measure do
       if x == :one
-        combinator = Mongo::Combinator1.new(db, parent_collection, parent_key, child_collection, child_key)
+        combinator = MongoMerge::Combinator1.new(db, parent_collection, parent_key, child_collection, child_key)
         doc_count = combinator.merge_1
       elsif x == :many
-        combinator = Mongo::CombinatorN.new(db, parent_collection, parent_key, child_collection, child_key)
+        combinator = MongoMerge::CombinatorN.new(db, parent_collection, parent_key, child_collection, child_key)
         doc_count = combinator.merge_n
       else
         raise "not reached"
