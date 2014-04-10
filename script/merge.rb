@@ -133,7 +133,7 @@ module MongoMerge
   end
 
   class ChildN < Child
-    THRESHOLD = 1000000
+    THRESHOLD = 100000
 
     def initialize(db, child_name, child_key)
       super
@@ -156,7 +156,7 @@ module MongoMerge
 
   class CombinatorN
     SLICE_SIZE = 20000
-    THRESHOLD = 1000000
+    THRESHOLD = 100000
 
     def initialize(db, parent_name, parent_key, child_name, child_key)
       @parent_name = parent_name
@@ -183,6 +183,7 @@ module MongoMerge
 
     def merge_n_small
       print "info: progress: "
+      STDOUT.flush
       size = merge_n_batch
       puts
       size
