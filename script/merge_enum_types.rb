@@ -17,7 +17,6 @@ require 'time'
 require 'json'
 require 'pp'
 require 'mongo'
-require 'benchmark'
 require 'ruby-prof'
 require 'trollop'
 

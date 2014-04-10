@@ -138,9 +138,9 @@ if $0 == __FILE__
   combinator = MongoMerge::CombinatorN.new(db, parent_name, parent_key, child_name, child_key)
 
   doc_count = 0
-  bm = Benchmark.measure do
+  tms = Benchmark.measure do
     doc_count = combinator.merge_n
   end
-  puts "info: real: #{'%.2f' % bm.real}, user: #{'%.2f' % bm.utime}, system:#{'%.2f' % bm.stime}, docs_per_sec: #{(doc_count.to_f/[bm.real, 0.000001].max).round}"
+  puts "info: real: #{'%.2f' % tms.real}, user: #{'%.2f' % tms.utime}, system:#{'%.2f' % tms.stime}, docs_per_sec: #{(doc_count.to_f/[tms.real, 0.000001].max).round}"
   mongo_client.close
 end

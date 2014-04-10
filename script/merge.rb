@@ -272,7 +272,7 @@ if $0 == __FILE__
     p merge_stamp
     if merged.find({merged: merge_stamp}).to_a.empty?
       doc_count = 0
-      bm = Benchmark.measure do
+      tms = Benchmark.measure do
         if x == :one
           combinator = MongoMerge::Combinator1.new(db, parent_collection, parent_key, child_collection, child_key)
           doc_count = combinator.merge_1
@@ -284,7 +284,7 @@ if $0 == __FILE__
         end
       end
       merged.insert({merged: merge_stamp})
-      puts "info: real: #{'%.2f' % bm.real}, user: #{'%.2f' % bm.utime}, system:#{'%.2f' % bm.stime}, docs_per_sec: #{(doc_count.to_f/[bm.real, 0.000001].max).round}"
+      puts "info: real: #{'%.2f' % tms.real}, user: #{'%.2f' % tms.utime}, system:#{'%.2f' % tms.stime}, docs_per_sec: #{(doc_count.to_f/[tms.real, 0.000001].max).round}"
     else
       puts "info: merge skipped - already stamped in collection 'merged'"
     end

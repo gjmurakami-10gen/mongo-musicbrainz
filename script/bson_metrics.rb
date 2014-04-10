@@ -52,7 +52,7 @@ ARGV.each_with_index do |filename, i|
     Hash.tally = 0
     String.tally = 0
     doc_count = 0
-    bm = Benchmark.measure do
+    tms = Benchmark.measure do
       while !file.eof
         Hash.from_bson(file)
         doc_count += 1
@@ -71,8 +71,8 @@ ARGV.each_with_index do |filename, i|
 
     print JSON.pretty_generate({
       file: filename,
-      seconds: bm.real.round,
-      docs_per_sec: (doc_count.to_f/bm.real).round,
+      seconds: tms.real.round,
+      docs_per_sec: (doc_count.to_f/tms.real).round,
       docs: doc_count,
       elements: element_count,
       elements_per_doc: (element_count.to_f / doc_count.to_f).round,

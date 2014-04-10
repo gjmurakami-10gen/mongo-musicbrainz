@@ -94,7 +94,7 @@ def load_table(name)
   file = File.open(file_name)
   file.each_slice(slice_size) do |lines|
     count += lines.count
-    bm = Benchmark.measure do
+    tms = Benchmark.measure do
       docs = lines.collect do |line|
         values = line.chomp.split(/\t/, -1)
         zip = columns.zip(values).select{|e| e[1] != "\\N" }
@@ -109,7 +109,7 @@ def load_table(name)
       end
       $collection.insert(docs)
     end
-    real += bm.real
+    real += tms.real
     puts "collection:#{name} pos:#{(100.0*file.pos/file.size).round}% real:#{real.round} count:#{count.to_s_with_comma} docs_per_sec:#{(lines.size.to_f/bm.real).round}"
     STDOUT.flush
     break if $options[:profile]
