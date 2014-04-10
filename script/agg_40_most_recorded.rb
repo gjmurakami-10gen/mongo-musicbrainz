@@ -16,10 +16,9 @@ max_id = 1_000_000
 limit = 40
 
 pipeline = [
-  #{'$match' => {'_id' => {'$lte' => max_id}}},
-  {'$project' => {'name' => 1, 'track' => 1} },
-  {'$unwind' => '$track'},
-  {'$group' => {'_id' => '$name', 'count' => {'$sum' => 1}}},
+  {'$match' => {'track' => {'$type' => 3}}}, #{'$match' => {'_id' => {'$lte' => max_id}, 'track' => {'$type' => 3}}},
+  {'$project' => {'name' => 1, 'track_count' => {'$size' => '$track'}}},
+  {'$group' => {'_id' => '$name', 'track_count' => {'$sum' => '$track_count'}}},
   {'$sort' => {'count' => -1}},
   {'$limit' => limit}
 ]
@@ -38,4 +37,4 @@ end
 
 puts title
 pp result
-puts "real: #{tms.real.round}" # 99 - MacBook Pro Retina, 15-inch, Late 2013, Processor  2.6 GHz Intel Core i7, MacBookPro11,3
+puts "real: #{tms.real.round}" # 102 - MacBook Pro Retina, 15-inch, Late 2013, Processor  2.6 GHz Intel Core i7, MacBookPro11,3
