@@ -89,6 +89,7 @@ module MongoMerge
 
   class Combinator1
     SLICE_SIZE = 20000
+    BATCH_SIZE = 5 * SLICE_SIZE
     THRESHOLD = 80000 # 100000 fails in hash_by_key with stack level too deep (SystemStackError)
 
     def initialize(db, parent_name, parent_key, child_name, child_key)
@@ -121,7 +122,7 @@ module MongoMerge
     def merge_1(query = {@parent_key => {'$ne' => nil}}, fields = {'_id' => 1, @parent_key => 1})
       doc_count = 0
       print "info: progress: "
-      @parent_coll.find(query, :fields => fields).each_slice(SLICE_SIZE) do |parent_docs|
+      @parent_coll.find(query, :fields => fields, :batch_size => BATCH_SIZE).each_slice(SLICE_SIZE) do |parent_docs|
         doc_count += parent_docs.size
         merge_1_batch(parent_docs)
         putc('.')
@@ -156,6 +157,7 @@ module MongoMerge
 
   class CombinatorN
     SLICE_SIZE = 20000
+    BATCH_SIZE = 5 * SLICE_SIZE
     THRESHOLD = 100000
 
     def initialize(db, parent_name, parent_key, child_name, child_key)
@@ -192,7 +194,7 @@ module MongoMerge
     def merge_n_big(query, fields)
       doc_count = 0
       print "info: progress: "
-      @parent_coll.find(query, :fields => fields).each_slice(SLICE_SIZE) do |parent_docs|
+      @parent_coll.find(query, :fields => fields, :batch_size => BATCH_SIZE).each_slice(SLICE_SIZE) do |parent_docs|
         doc_count += parent_docs.size
         merge_n_batch(parent_docs)
         putc('.')
