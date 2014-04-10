@@ -284,7 +284,7 @@ if $0 == __FILE__
       merged.insert({merged: merge_stamp})
       puts "info: real: #{'%.2f' % bm.real}, user: #{'%.2f' % bm.utime}, system:#{'%.2f' % bm.stime}, docs_per_sec: #{(doc_count.to_f/[bm.real, 0.000001].max).round}"
     else
-      puts "info: already completed - skipping re-merge"
+      puts "info: merge skipped - already stamped in collection 'merged'"
     end
   end
 
