@@ -153,13 +153,17 @@ namespace :mongo do
     FileUtils.mkdir_p(MONGO_DBPATH) unless File.directory?(MONGO_DBPATH)
     pid = file_to_s(MONGOD_LOCKPATH).to_i
     begin
-      Process.kill(0, pid) if pid > 0
+      pid > 0 && Process.kill(0, pid) || raise
     rescue
       sh "mongod --dbpath #{MONGO_DBPATH} --port #{MONGOD_PORT} --fork --logpath #{MONGOD_LOGPATH}"
     end
   end
   task :status do
-    sh "ps -fp #{file_to_s(MONGOD_LOCKPATH)} || true" if File.size?(MONGOD_LOCKPATH)
+    pid = file_to_s(MONGOD_LOCKPATH).to_i
+    begin
+      sh "ps -fp #{file_to_s(MONGOD_LOCKPATH)} || true" if File.size?(MONGOD_LOCKPATH) if pid > 0 && Process.kill(0, pid)
+    rescue
+    end  
   end
   task :stop do
     pid = file_to_s(MONGOD_LOCKPATH).to_i

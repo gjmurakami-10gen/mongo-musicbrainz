@@ -110,7 +110,7 @@ def load_table(name)
       $collection.insert(docs)
     end
     real += tms.real
-    puts "collection:#{name} pos:#{(100.0*file.pos/file.size).round}% real:#{real.round} count:#{count.to_s_with_comma} docs_per_sec:#{(lines.size.to_f/bm.real).round}"
+    puts "collection:#{name} pos:#{(100.0*file.pos/file.size).round}% real:#{real.round} count:#{count.to_s_with_comma} docs_per_sec:#{(lines.size.to_f/tms.real).round}"
     STDOUT.flush
     break if $options[:profile]
   end
