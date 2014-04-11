@@ -151,13 +151,25 @@ end
 namespace :mongo do
   task :start do
     FileUtils.mkdir_p(MONGO_DBPATH) unless File.directory?(MONGO_DBPATH)
-    sh "mongod --dbpath #{MONGO_DBPATH} --port #{MONGOD_PORT} --fork --logpath #{MONGOD_LOGPATH}"
+    pid = file_to_s(MONGOD_LOCKPATH).to_i
+    begin
+      Process.kill(0, pid) if pid > 0
+    rescue
+      sh "mongod --dbpath #{MONGO_DBPATH} --port #{MONGOD_PORT} --fork --logpath #{MONGOD_LOGPATH}"
+    end
   end
   task :status do
     sh "ps -fp #{file_to_s(MONGOD_LOCKPATH)} || true" if File.size?(MONGOD_LOCKPATH)
   end
   task :stop do
-    sh "kill #{file_to_s(MONGOD_LOCKPATH)} || true" if File.size?(MONGOD_LOCKPATH)
+    pid = file_to_s(MONGOD_LOCKPATH).to_i
+    if pid > 0
+      begin
+        Process.kill('QUIT', pid)
+        sleep 1 while Process.kill(0, pid)
+      rescue
+      end
+    end
   end
   task :shell do
     sh "mongo --port #{MONGOD_PORT} '#{MONGO_DBNAME}'"
