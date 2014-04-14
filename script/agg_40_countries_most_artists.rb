@@ -14,11 +14,15 @@ pipeline = [
   {'$limit' => 40}
 ]
 
-collection = Mongo::MongoClient.from_uri.db[collection_name]
+db = Mongo::MongoClient.from_uri.db
+collection = db[collection_name]
 result = []
 tms = Benchmark.measure do
   result = collection.aggregate(pipeline, :cursor => {}, :allowDiskUse => true).to_a
 end
 result.each{|doc| puts "    #{'%-18s' % doc['_id']}#{'%7d' % doc['count']}"}
-puts "real: #{tms.real.round}"
-# 30 seconds (storage), 1 second (collection in memory) - 2.6 GHz Intel Core i7, MacBookPro11,3
+coll_stats = db.command({collStats: collection_name})
+puts "real: #{'%.1f' % tms.real} seconds, collection size: #{'%.1f' % (coll_stats['size'].to_f/1_000_000_000.0)} GB"
+# real: 25.3 seconds, collection size: 2.2 GB
+# real: 1.2 seconds, collection size: 2.2 GB
+# 2.6 GHz Intel Core i7, MacBookPro11,3
