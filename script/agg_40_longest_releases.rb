@@ -1,0 +1,40 @@
+#!/usr/bin/env ruby
+require 'mongo'
+require 'benchmark'
+
+puts '40 longest releases'
+
+collection_name = 'release_group'
+
+pipeline = [
+  {'$unwind' => '$release'},
+  {'$unwind' => '$release.medium'},
+  {'$unwind' => '$release.medium.track'},
+  {'$group' => {'_id' => '$release.medium._id',
+                'release_group' => {'$first' => '$_id'},
+                'name' => {'$first' => '$name'},
+                'length' => {'$sum' => '$release.medium.track.length'},
+                'count' => {'$sum' => 1}}},
+  {'$group' => {'_id' => '$release_group',
+                'name' => {'$first' => '$name'},
+                'length' => {'$first' => '$length'},
+                'count' => {'$first' => '$count'}}},
+  {'$sort' => {'length' => -1}},
+  {'$limit' => 40}
+]
+
+db = Mongo::MongoClient.from_uri.db
+collection = db[collection_name]
+result = []
+tms = Benchmark.measure do
+  result = collection.aggregate(pipeline, :cursor => {}, :allowDiskUse => true).to_a
+end
+pp result
+result.each{|doc| puts "    #{'%11d' % doc['length']} #{'%3d' % doc['count']} #{doc['name']}"}
+coll_stats = db.command({collStats: collection_name})
+puts "real: #{'%.1f' % tms.real} seconds"
+puts "collection size: #{'%.1f' % (coll_stats['size'].to_f/1_000_000_000.0)} GB, count:#{coll_stats['count']}, avgObjSize:#{coll_stats['avgObjSize']}"
+# real: 25.3 seconds
+# real: 1.2 seconds
+# collection size: 2.2 GB
+# 2.6 GHz Intel Core i7, MacBookPro11,3
