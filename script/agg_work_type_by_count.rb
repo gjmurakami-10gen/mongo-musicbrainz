@@ -21,8 +21,8 @@ end
 result.each{|doc| puts "    #{'%7d' % doc['count']} #{doc['_id']}"}
 coll_stats = db.command({collStats: collection_name})
 puts "real: #{'%.1f' % tms.real} seconds"
-puts "collection size: #{'%.1f' % (coll_stats['size'].to_f/1_000_000_000.0)} GB, count:#{coll_stats['count']}, avgObjSize:#{coll_stats['avgObjSize']}"
+puts "collection size: #{'%.1f' % (coll_stats['size'].to_f/1_000_000_000.0)} GB, count: #{coll_stats['count']}, avgObjSize: #{coll_stats['avgObjSize']}"
 # real: 3.5 seconds
-# real: 0.9 seconds
-# collection size: 0.2 GB
+# real: 0.7 seconds
+# collection size: 0.2 GB, count: 476796, avgObjSize: 441
 # 2.6 GHz Intel Core i7, MacBookPro11,3

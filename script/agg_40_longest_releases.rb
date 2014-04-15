@@ -15,6 +15,7 @@ pipeline = [
                 'name' => {'$first' => '$name'},
                 'length' => {'$sum' => '$release.medium.track.length'},
                 'count' => {'$sum' => 1}}},
+  {'$sort' => {'length' => -1}},
   {'$group' => {'_id' => '$release_group',
                 'name' => {'$first' => '$name'},
                 'length' => {'$first' => '$length'},
@@ -29,12 +30,10 @@ result = []
 tms = Benchmark.measure do
   result = collection.aggregate(pipeline, :cursor => {}, :allowDiskUse => true).to_a
 end
-pp result
 result.each{|doc| puts "    #{'%11d' % doc['length']} #{'%3d' % doc['count']} #{doc['name']}"}
 coll_stats = db.command({collStats: collection_name})
 puts "real: #{'%.1f' % tms.real} seconds"
-puts "collection size: #{'%.1f' % (coll_stats['size'].to_f/1_000_000_000.0)} GB, count:#{coll_stats['count']}, avgObjSize:#{coll_stats['avgObjSize']}"
-# real: 25.3 seconds
-# real: 1.2 seconds
-# collection size: 2.2 GB
+puts "collection size: #{'%.1f' % (coll_stats['size'].to_f/1_000_000_000.0)} GB, count: #{coll_stats['count']}, avgObjSize: #{coll_stats['avgObjSize']}"
+# real: 516.8 seconds
+# collection size: 17.6 GB, count: 1039090, avgObjSize: 16962
 # 2.6 GHz Intel Core i7, MacBookPro11,3
