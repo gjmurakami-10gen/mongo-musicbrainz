@@ -13,7 +13,7 @@
 # limitations under the License.
 
 require_relative 'spec_helper'
-require 'merge'
+require 'merge_agg'
 
 unless defined? Mongo::ObjectId.<=>
   module BSON
@@ -25,7 +25,7 @@ unless defined? Mongo::ObjectId.<=>
   end
 end
 
-describe MongoMerge::Combinator1 do
+describe MongoMerge::Combinator do
 
   context "combinator1" do
 
@@ -37,7 +37,6 @@ describe MongoMerge::Combinator1 do
 
       @mongo_client = Mongo::MongoClient.from_uri
       @db = @mongo_client[@db_name]
-      @combinator = MongoMerge::Combinator1.new(@db, 'people', 'gender', 'gender', '_id')
       @data = {
           :before => {
               :people => [
@@ -66,16 +65,11 @@ describe MongoMerge::Combinator1 do
       @mongo_client.drop_database(@db_name)
     end
 
-    it("should merge child into parent") {
-      @combinator.merge_1 # initial merge_1
+    it("should merge children into parent using aggregation") {
+      combinator = MongoMerge::Combinator.new('people', ['gender'])
+      combinator.execute
       match_fixture(@db, @data[:after])
     }
-    it("should re-merge child into parent") {
-      @combinator.merge_1 # initial merge_1
-      @combinator.merge_1 # re-run merge_1
-      match_fixture(@db, @data[:after])
-    }
-
   end
 
   context "combinatorN" do
@@ -88,7 +82,6 @@ describe MongoMerge::Combinator1 do
 
       @mongo_client = Mongo::MongoClient.from_uri
       @db = @mongo_client[@db_name]
-      @combinator = MongoMerge::CombinatorN.new(@db, 'owner', 'pet', 'pet', 'owner')
       @data = {
           :before => {
               :owner => [
@@ -159,49 +152,9 @@ describe MongoMerge::Combinator1 do
       expect(a.sort!{|a,b| a.first.last <=> b.first.last}).to eq(a)
     }
 
-    it("should merge children into parent") {
-      @combinator.merge_n # initial merge_n
-      @combinator = MongoMerge::CombinatorN.new(@db, 'owner', 'alias', 'alias', 'owner')
-      @combinator.merge_n # initial merge_n
-      match_fixture(@db, @data[:after])
-    }
-    it("should re-merge children into parent") {
-      @combinator.merge_n # initial merge_n
-      @combinator.merge_n # re-run merge_n
-      @combinator = MongoMerge::CombinatorN.new(@db, 'owner', 'alias', 'alias', 'owner')
-      @combinator.merge_n # re-run merge_n
-      @combinator.merge_n # re-run merge_n
-      match_fixture(@db, @data[:after])
-    }
     it("should merge children into parent using aggregation") {
-      spec = [
-       ['pet', 'pet', 'owner'],
-       ['alias', 'alias', 'owner']
-      ]
-      coll_tmp = @db['agg_tmp']
-      spec.each do |parent_key, child_name, child_key|
-        coll = @db[child_name]
-        coll.find({child_key => {'$ne' => nil}}).each_slice(10_000) do |slice|
-          bulk = coll_tmp.initialize_unordered_bulk_op
-          slice.each do |doc|
-            bulk.insert({'parent_id' => doc[child_key], parent_key => doc})
-          end
-          bulk.execute
-        end
-      end
-      fields = spec.collect{|a|a.first}
-      group = Hash[*(['_id', '$parent_id'] + fields.collect{|k|[k,{'$push' => "$#{k}"}]}).flatten]
-      pipeline = [{'$group' => group}]
-      @coll = @db['owner']
-      coll_tmp.aggregate(pipeline, :cursor => {}, :allowDiskUse => true).each_slice(10_000) do |slice|
-        bulk = @coll.initialize_unordered_bulk_op
-        slice.each do |doc|
-          id = doc['_id']
-          doc.delete('_id')
-          bulk.find({'_id' => id}).update({'$set' => doc})
-        end
-        bulk.execute
-      end
+      combinator = MongoMerge::Combinator.new('owner', ['pet:[]', 'alias:[]'])
+      combinator.execute
       match_fixture(@db, @data[:after])
     }
   end
