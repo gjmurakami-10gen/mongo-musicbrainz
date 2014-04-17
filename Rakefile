@@ -178,6 +178,13 @@ namespace :mongo do
   task :shell do
     sh "mongo --port #{MONGOD_PORT} '#{MONGO_DBNAME}'"
   end
+  task :mac do
+    # /etc/sysctl.conf:kern.maxfiles=20480
+    # /etc/launchd.conf:limit maxfiles 8192 64000
+    # /etc/lanchd.conf:limit maxproc 1000 2000
+    # /etc/profile:ulimit -n 4096
+    sh "sudo launchctl limit maxfiles 8192 64000"
+  end
 end
 
 RSpec::Core::RakeTask.new(:spec)
@@ -336,7 +343,7 @@ namespace :merge do
       end
     end
     task parent_collection.to_sym => dependencies do
-      sh "(MONGODB_URI='#{MONGODB_URI}' time script/merge_agg.rb #{parent_collection} #{children.join(' ')}) #> log/merge_#{parent_collection} 2>&1"
+      sh "MONGODB_URI='#{MONGODB_URI}' time script/merge_agg.rb #{parent_collection} #{children.join(' ')}"
     end
   end
   task :all => spec_group.collect{|spec|spec.first}
