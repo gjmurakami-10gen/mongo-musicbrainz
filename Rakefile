@@ -345,13 +345,6 @@ namespace :merge do
   end
 end
 
-desc "merge"
-task :merge do
-  JSON.parse(IO.read(MERGE_SPEC)).each do |x, parent, child|
-    sh "MONGODB_URI='#{MONGODB_URI}' time ./script/merge_#{x}.rb #{parent} #{child} || true"
-  end
-end
-
 namespace :metrics do
   task :wc_all do
     sh "cd #{FULLEXPORT_LATEST_DIR}/mbdump && wc -l * | sort -nr"

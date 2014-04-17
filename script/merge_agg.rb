@@ -176,9 +176,8 @@ if $0 == __FILE__
     with parent_key as default child_collection and parent_collection as default child_key
   EOT
   abort(USAGE) if ARGV.size < 2
-  puts ARGV.join(' ')
-  parent_name, merge_spec = ARGV.shift
-  combinator = MongoMerge::Combinator.new(parent_name, merge_spec)
+  parent_name, merge_spec = ARGV
+  combinator = MongoMerge::Combinator.new(parent_name, Array(merge_spec))
   doc_count = 0
   tms = Benchmark.measure do
     doc_count = combinator.execute

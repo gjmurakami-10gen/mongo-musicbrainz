@@ -1,6 +1,7 @@
 # TO DO
 
 * aggregation merge many
+  * move merged marker out of merge_agg into Rakefile
   * key:[child_collection.foreign_key]
     * copy child_collection - {"_fk" => foreign_key, "key" => child_doc}
     * aggregate({"$group" => {"_id" => "$_fk", "key1" => "$key1", "key2" => "$key2", ...})
