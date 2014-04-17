@@ -45,11 +45,6 @@ SCHEMA_FILE = "#{BASE_DIR}/schema/create_tables.json"
 MONGO_DBNAME = "musicbrainz"
 
 $create_tables = JSON.parse(IO.read(SCHEMA_FILE))
-$client = Mongo::MongoClient.from_uri
-$db = $client[MONGO_DBNAME]
-$collection = nil
-
-$options = {}
 
 $transform = {
     'BOOLEAN' => Proc.new {|s| if s == 't'; true; elsif s == 'f'; false; else raise 'BOOLEAN'; end },
@@ -79,16 +74,26 @@ $transform = {
     'POINT' => Proc.new {|s| s[/\(([^)]*)\)/,1].split(',').collect{|si| si.to_f} }
 }
 
-def load_table(name)
-  $collection = $db[name]
-  $collection.remove
-
-  statement = $create_tables.find{|sql| sql.has_key?('create_table') && sql['create_table']['table_name'] == name}
+def get_columns(table_name)
+  statement = $create_tables.find{|sql| sql.has_key?('create_table') && sql['create_table']['table_name'] == table_name}
   create_table = statement['create_table']
-  table_name = create_table['table_name']
-  columns = create_table['columns']
-  file_name = "#{MBDUMP_DIR}/#{table_name}"
-  slice_size = $options[:profile] ? 10_000 : 100_000
+  create_table['columns']
+end
+
+def merge_transforms(columns)
+  columns.collect{|column|
+    transform = $transform.fetch(column['data_type']){|key| raise "$transform[#{key.inspect}] unimplemented for column #{column['column_name'].inspect}"}
+    column.merge('transform' => transform)
+  }
+end
+
+def load_table(db, name, options)
+  collection = db[name]
+  collection.remove
+  columns = get_columns(name)
+  columns = merge_transforms(columns)
+  file_name = "#{MBDUMP_DIR}/#{name}"
+  slice_size = options[:profile] ? 10_000 : 100_000
   count = 0
   real = 0.0
   file = File.open(file_name)
@@ -99,39 +104,44 @@ def load_table(name)
         values = line.chomp.split(/\t/, -1)
         zip = columns.zip(values).select{|e| e[1] != "\\N" }
         doc = zip.collect do |column, value|
-          transform = $transform.fetch(column['data_type']){|key| raise "$transform[#{key.inspect} unimplemented value:#{value.inspect}"}
           key = column['column_name']
           key = '_id' if key == 'id'
+          transform = column['transform']
           value = transform.call(value) if transform
           [key, value]
         end
         Hash[*doc.flatten(1)]
       end
-      $collection.insert(docs)
+      collection.insert(docs)
     end
     real += tms.real
     puts "collection:#{name} pos:#{(100.0*file.pos/file.size).round}% real:#{real.round} count:#{count.to_s_with_comma} docs_per_sec:#{(lines.size.to_f/tms.real).round}"
     STDOUT.flush
-    break if $options[:profile]
+    break if options[:profile]
   end
 end
 
-banner = "usage: #{$0} [options] table_names"
+if $0 == __FILE__
+  banner = "usage: #{$0} [options] table_names"
 
-$options = Trollop::options do
-  banner banner
-  opt :profile, "Profile", :short => 'p', :default => false
-end
-
-abort banner if ARGV.size < 1
-
-ARGV.each_with_index do |arg, index|
-  puts "[#{index+1} of #{ARGV.size}] #{arg}"
-  if $options[:profile]
-    profile { load_table(arg) }
-  else
-    load_table(arg)
+  options = Trollop::options do
+    banner banner
+    opt :profile, "Profile", :short => 'p', :default => false
   end
-end
 
-$client.close
+  abort banner if ARGV.size < 1
+
+  client = Mongo::MongoClient.from_uri
+  db = client[MONGO_DBNAME]
+
+  ARGV.each_with_index do |arg, index|
+    puts "[#{index+1} of #{ARGV.size}] #{arg}"
+    if options[:profile]
+      profile { load_table(db, arg, options) }
+    else
+      load_table(db, arg, options)
+    end
+  end
+
+  client.close
+end
