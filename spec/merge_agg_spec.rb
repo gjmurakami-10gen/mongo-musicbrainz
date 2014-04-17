@@ -70,6 +70,15 @@ describe MongoMerge::Combinator do
       combinator.execute
       match_fixture(@db, @data[:after])
     }
+    it("should remerge children into parent using aggregation") {
+      combinator = MongoMerge::Combinator.new('people', ['gender'])
+      combinator.execute
+      match_fixture(@db, @data[:after])
+      @db.drop_collection('merged')
+      combinator.execute
+      match_fixture(@db, @data[:after])
+    }
+
   end
 
   context "combinatorN" do
@@ -157,6 +166,15 @@ describe MongoMerge::Combinator do
       combinator.execute
       match_fixture(@db, @data[:after])
     }
+    it("should re-merge children into parent using aggregation") {
+      combinator = MongoMerge::Combinator.new('owner', ['pet:[]', 'alias:[]'])
+      combinator.execute
+      match_fixture(@db, @data[:after])
+      @db.drop_collection('merged')
+      combinator.execute
+      match_fixture(@db, @data[:after])
+    }
+
   end
 end
 

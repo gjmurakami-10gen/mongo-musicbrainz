@@ -86,7 +86,9 @@ module MongoMerge
       @parent_coll.find({parent_key => {'$ne' => nil}}, :fields => {'_id' => 1, parent_key => 1}, :batch_size => BATCH_SIZE).each_slice(SLICE_SIZE) do |parent_docs|
         bulk = @temp_coll.initialize_unordered_bulk_op
         parent_docs.each do |doc|
-          bulk.insert({'parent_id' => doc['_id'], parent_key => child_fetch(doc[parent_key], parent_docs, child_key)})
+          val = doc[parent_key]
+          fk = val.is_a?(Hash) ? val[@child_key] : val
+          bulk.insert({'parent_id' => doc['_id'], parent_key => child_fetch(fk, parent_docs, parent_key)})
         end
         bulk.execute
         print ">#{parent_docs.count}"
