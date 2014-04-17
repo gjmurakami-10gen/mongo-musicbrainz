@@ -92,6 +92,7 @@ def load_table(db, name, options)
   collection.remove
   columns = get_columns(name)
   columns = merge_transforms(columns)
+  columns = columns.collect{|column| [column['column_name'], column['transform']]}
   file_name = "#{MBDUMP_DIR}/#{name}"
   slice_size = options[:profile] ? 10_000 : 100_000
   count = 0
@@ -104,9 +105,9 @@ def load_table(db, name, options)
         values = line.chomp.split(/\t/, -1)
         zip = columns.zip(values).select{|e| e[1] != "\\N" }
         doc = zip.collect do |column, value|
-          key = column['column_name']
+          key = column.first #column['column_name']
           key = '_id' if key == 'id'
-          transform = column['transform']
+          transform = column.last #column['transform']
           value = transform.call(value) if transform
           [key, value]
         end
