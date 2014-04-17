@@ -23,79 +23,18 @@ def hash_by_key(a, key)
   Hash[*a.collect{|e| [e[key], e]}.flatten(1)]
 end
 
-def ordered_group_by_first(pairs, child_key = nil)
-  pairs.inject([[], nil]) do |memo, pair|
-    result, previous_value = memo
-    current_value = pair.first
-    if previous_value != current_value
-      if child_key && result.last && (obj = result.last.last)
-        if obj.first.is_a?(Hash)
-          obj.sort!{|a,b| a[child_key] <=> b[child_key]}
-        else
-          obj.sort!{|a,b| a <=> b}
-        end
-      end
-      result << [current_value, []]
-    end
-    result.last.last << pair.last
-    [result, current_value]
-  end.first
-end
-
 module MongoMerge
-  class Child
-    attr_reader :child_count
-
-    def initialize(db, child_name, child_key)
-      @child_name = child_name
-      @child_key = child_key
-      @child_coll = db[@child_name]
-      @child_count = @child_coll.count
-      puts "info: child #{@child_name.inspect}, count: #{@child_count}"
-      @child_coll.ensure_index(child_key => Mongo::ASCENDING)
-    end
-  end
-
-  class Child1 < Child
-    THRESHOLD = 80000 # 100000 fails in hash_by_key with stack level too deep (SystemStackError)
-
-    attr_reader :child_key
-
-    def initialize(db, child_name, child_key)
-      super
-      @child_hash = Hash.new
-      @parent_docs_fetched = nil
-    end
-
-    def load_child_hash(parent_docs, parent_key)
-      child_docs = if @child_count <= THRESHOLD
-                     @child_coll.find({@child_key => {'$ne' => nil}}).to_a
-                   else
-                     keys = parent_docs.collect{|doc| val = doc[parent_key]; val.is_a?(Hash) ? val[@child_key] : val }.sort.uniq
-                     @child_coll.find({@child_key => {'$in' => keys}}).to_a
-                   end
-      print "<#{child_docs.count}"
-      @child_hash = hash_by_key(child_docs, @child_key)
-    end
-
-    def child_fetch(key, parent_docs, parent_key)
-      doc = @child_hash[key]
-      return doc if doc || parent_docs == @parent_docs_fetched
-      load_child_hash(parent_docs, parent_key)
-      @parent_docs_fetched = parent_docs
-      @child_hash[key]
-    end
-  end
-
   class Combinator
+
     RE_PARENT_KEY = '(?<parent_key>[^:]+)'
     RE_CHILD_NAME = '(?<child_name>[^.\\[\\]]*)?'
     RE_CHILD_KEY = '(?<child_key>[^\\[\\]]*)'
 
-    MERGED_NAME = 'merged'
-
-    SLICE_SIZE = 10_000
+    THRESHOLD = 80_000 # 100_000 fails in hash_by_key with stack level too deep (SystemStackError)
+    SLICE_SIZE = 20_000
     BATCH_SIZE = 5 * SLICE_SIZE
+
+    MERGED_NAME = 'merged'
 
     def initialize(parent_name, merge_spec)
       @parent_name = parent_name
@@ -120,43 +59,74 @@ module MongoMerge
       end
     end
 
+    def load_child_hash(parent_docs, parent_key)
+      child_docs = if @child_count <= THRESHOLD
+                     @child_coll.find({@child_key => {'$ne' => nil}}).to_a
+                   else
+                     keys = parent_docs.collect{|doc| val = doc[parent_key]; val.is_a?(Hash) ? val[@child_key] : val }.sort.uniq
+                     @child_coll.find({@child_key => {'$in' => keys}}).to_a
+                   end
+      print "<#{child_docs.count}"
+      @child_hash = hash_by_key(child_docs, @child_key)
+    end
+
+    def child_fetch(key, parent_docs, parent_key)
+      doc = @child_hash[key]
+      return doc if doc || parent_docs == @parent_docs_fetched
+      load_child_hash(parent_docs, parent_key)
+      @parent_docs_fetched = parent_docs
+      @child_hash[key]
+    end
+
     def copy_one_with_parent_id(parent_key, child_name, child_key)
-      child_coll = @db[child_name]
-      h = hash_by_key(child_coll.find({child_key => {'$ne' => nil}}).to_a, child_key)
-      @parent_coll.find({parent_key => {'$ne' => nil}}, :fields => {'_id' => 1, parent_key => 1}, :batch_size => BATCH_SIZE).each_slice(SLICE_SIZE) do |slice|
+      @child_coll = @db[child_name]
+      @child_count = @child_coll.count
+      @child_key = child_key
+      @child_hash = {}
+      @parent_coll.find({parent_key => {'$ne' => nil}}, :fields => {'_id' => 1, parent_key => 1}, :batch_size => BATCH_SIZE).each_slice(SLICE_SIZE) do |parent_docs|
         bulk = @temp_coll.initialize_unordered_bulk_op
-        slice.each do |doc|
-          bulk.insert({'parent_id' => doc['_id'], parent_key => h[doc[parent_key]]})
+        parent_docs.each do |doc|
+          bulk.insert({'parent_id' => doc['_id'], parent_key => child_fetch(doc[parent_key], parent_docs, child_key)})
         end
         bulk.execute
+        print ">#{parent_docs.count}"
+        STDOUT.flush
       end
     end
 
     def copy_many_with_parent_id(parent_key, child_name, child_key)
       child_coll = @db[child_name]
-      child_coll.find({child_key => {'$ne' => nil}}, :batch_size => BATCH_SIZE).each_slice(SLICE_SIZE) do |slice|
+      child_coll.find({child_key => {'$ne' => nil}}, :batch_size => BATCH_SIZE).each_slice(SLICE_SIZE) do |child_docs|
         bulk = @temp_coll.initialize_unordered_bulk_op
-        slice.each do |doc|
+        child_docs.each do |doc|
           bulk.insert({'parent_id' => doc[child_key], parent_key => doc})
         end
         bulk.execute
+        print ">#{child_docs.count}"
+        STDOUT.flush
       end
     end
 
     def group_and_update(group_spec)
+      doc_count = 0
       pipeline = [{'$group' => group_spec}]
-      @temp_coll.aggregate(pipeline, :cursor => {}, :allowDiskUse => true).each_slice(SLICE_SIZE) do |slice| # :batch_size => BATCH_SIZE
+      @temp_coll.aggregate(pipeline, :cursor => {}, :allowDiskUse => true).each_slice(SLICE_SIZE) do |temp_docs| # :batch_size => BATCH_SIZE
         bulk = @parent_coll.initialize_unordered_bulk_op
-        slice.each do |doc|
+        temp_docs.each do |doc|
           id = doc['_id']
           doc.delete('_id')
           bulk.find({'_id' => id}).update_one({'$set' => doc})
         end
         bulk.execute
+        print ">#{temp_docs.count}"
+        STDOUT.flush
+        doc_count += temp_docs.size
       end
+      doc_count
     end
 
     def execute
+      doc_count = 0
       @mongo_client = Mongo::MongoClient.from_uri
       @db = @mongo_client.db
       merged_coll = @db[MERGED_NAME]
@@ -166,7 +136,10 @@ module MongoMerge
         temp_name = "#{@parent_name}_merge_temp"
         @temp_coll = @db[temp_name]
         group_spec = {'_id' => '$parent_id'}
-        @exanded_spec.each do |x, parent_key, child_name, child_key|
+        @exanded_spec.each do |spec|
+          x, parent_key, child_name, child_key = spec
+          puts "info: spec: #{spec.inspect}"
+          print "info: progress: "
           if x == :one
             copy_one_with_parent_id(parent_key, child_name, child_key)
             group_spec.merge!(parent_key => {'$first' => "$#{parent_key}"})
@@ -176,15 +149,21 @@ module MongoMerge
           else
             raise "not reached"
           end
+          puts
         end
-        group_and_update(group_spec)
+        puts "info: group: #{@parent_name}"
+        print "info: progress: "
+        doc_count = group_and_update(group_spec)
+        puts
         @db.drop_collection(temp_name)
         merged_coll.insert({merged: merge_stamp})
       else
         puts "info: merge skipped - already stamped in collection 'merged'"
       end
       @mongo_client.close
+      doc_count
     end
+
   end
 end
 
