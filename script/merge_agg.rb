@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-require 'time'
-require 'pp'
-require 'json'
 require 'mongo'
 require 'benchmark'
 
@@ -136,6 +133,7 @@ module MongoMerge
       if merged_coll.find({merged: merge_stamp}).to_a.empty?
         @parent_coll = @db[@parent_name]
         temp_name = "#{@parent_name}_merge_temp"
+        @db.drop_collection(temp_name)
         @temp_coll = @db[temp_name]
         group_spec = {'_id' => '$parent_id'}
         @exanded_spec.each do |spec|
@@ -178,8 +176,8 @@ if $0 == __FILE__
     with parent_key as default child_collection and parent_collection as default child_key
   EOT
   abort(USAGE) if ARGV.size < 2
-  parent_name = ARGV.shift
-  combinator = MongoMerge::Combinator.new(parent_name, ARGV)
+  parent_name, *merge_spec = ARGV
+  combinator = MongoMerge::Combinator.new(parent_name, merge_spec)
   doc_count = 0
   tms = Benchmark.measure do
     doc_count = combinator.execute
