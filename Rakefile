@@ -179,10 +179,10 @@ namespace :mongo do
     sh "mongo --port #{MONGOD_PORT} '#{MONGO_DBNAME}'"
   end
   task :mac do
-    # /etc/sysctl.conf:kern.maxfiles=20480
+    # /etc/sysctl.conf:kern.maxfiles=64000
     # /etc/launchd.conf:limit maxfiles 8192 64000
-    # /etc/lanchd.conf:limit maxproc 1000 2000
-    # /etc/profile:ulimit -n 4096
+    # /etc/launchd.conf:limit maxproc 1000 2000
+    # /etc/profile:ulimit -n 8192
     sh "sudo launchctl limit maxfiles 8192 64000"
   end
 end
