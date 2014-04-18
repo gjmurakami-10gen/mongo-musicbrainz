@@ -40,20 +40,24 @@ describe MongoMerge::Combinator do
       @data = {
           :before => {
               :people => [
-                  {"_id" => 11, "name" => "Joe", "gender" => 1},
-                  {"_id" => 22, "name" => "Jane", "gender" => 2},
+                  {"_id" => 11, "name" => "Joe", "gender" => 1, "alias" => 1},
+                  {"_id" => 22, "name" => "Jane", "gender" => 2, "alias" => 2},
                   {"_id" => 33, "name" => "Other"}
               ],
               :gender => [
                   {"_id" => 1, "name" => "Male"},
                   {"_id" => 2, "name" => "Female"},
                   {"_id" => 3, "name" => "Other"}
+              ],
+              :alias => [
+                  {"_id" => 1, "name" => "Joseph"},
+                  {"_id" => 2, "name" => "Janey"}
               ]
           },
           :after => {
               :people => [
-                  {"_id"=>11, "name"=>"Joe", "gender"=>{"_id"=>1, "name"=>"Male"}},
-                  {"_id"=>22, "name"=>"Jane", "gender"=>{"_id"=>2, "name"=>"Female"}},
+                  {"_id"=>11, "name"=>"Joe", "gender"=>{"_id"=>1, "name"=>"Male"}, "alias" => {"_id" => 1, "name" => "Joseph"}},
+                  {"_id"=>22, "name"=>"Jane", "gender"=>{"_id"=>2, "name"=>"Female"}, "alias" => {"_id" => 2, "name" => "Janey"}},
                   {"_id"=>33, "name"=>"Other"}
               ]
           }
@@ -66,12 +70,12 @@ describe MongoMerge::Combinator do
     end
 
     it("should merge children into parent using aggregation") {
-      combinator = MongoMerge::Combinator.new('people', ['gender'])
+      combinator = MongoMerge::Combinator.new('people', ['gender', 'alias'])
       combinator.execute
       match_fixture(@db, @data[:after])
     }
     it("should remerge children into parent using aggregation") {
-      combinator = MongoMerge::Combinator.new('people', ['gender'])
+      combinator = MongoMerge::Combinator.new('people', ['gender', 'alias'])
       combinator.execute
       match_fixture(@db, @data[:after])
       @db.drop_collection('merged')

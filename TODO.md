@@ -1,5 +1,13 @@
 # TO DO
 
+* aggregation merge one
+  * parent_doc, parent_key, child_doc, child_key
+  * child {'child_name' => child_name, 'merge_id' => child_doc[child_key], parent_key => child_doc}
+  * parent {'child_name' => child_name, 'merge_id' => parent_doc[parent_key], 'parent_id' => parent_doc['_id']}
+  * {'$group' => {'_id' => {'child_name' => 'child_name', 'merge_id' => '$merge_id'}, 'parent_id' => {'$push' => 'parent_id'}, parent_key => {'$push' => "$#{parent_key"}}
+  * {'$unwind' => "$#{parent_key}"}
+  * {'$unwind' => '$parent_id'}
+  * {'$group' => {'_id' => '$parent_id', parent_key => {'$push' => "$#{parent_key"}}
 * aggregation merge many
   * move merged marker out of merge_agg into Rakefile, re-evaluate
   * optimize solo merge one (?)
