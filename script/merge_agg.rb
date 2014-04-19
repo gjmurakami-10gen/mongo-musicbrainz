@@ -75,6 +75,16 @@ module MongoMerge
       @child_hash[key]
     end
 
+    def agg_copy(source_coll, dest_coll, pipeline)
+      source_coll.aggregate(pipeline, :cursor => {}).each_slice(SLICE_SIZE) do |docs|
+        bulk = dest_coll.initialize_unordered_bulk_op
+        docs.each{|doc| bulk.insert(doc)}
+        bulk.execute
+        print ">#{docs.count}"
+        STDOUT.flush
+      end
+    end
+
     def copy_one_with_parent_id(parent_key, child_name, child_key)
       @child_coll = @db[child_name]
       @child_count = @child_coll.count
@@ -95,16 +105,14 @@ module MongoMerge
 
     def copy_many_with_parent_id(parent_key, child_name, child_key)
       child_coll = @db[child_name]
-      pipeline = [{'$match' => {child_key => {'$ne' => nil}}}, {'$project' => {'_id' => 0, 'parent_id' => "$#{child_key}", parent_key => '$$ROOT'}}]
-      child_coll.aggregate(pipeline, :cursor => {}).each_slice(SLICE_SIZE) do |child_docs|
-        bulk = @temp_coll.initialize_unordered_bulk_op
-        child_docs.each do |doc|
-          bulk.insert(doc)
-        end
-        bulk.execute
-        print ">#{child_docs.count}"
-        STDOUT.flush
-      end
+      agg_copy(child_coll, @temp_coll, [
+          {'$match' => {child_key => {'$ne' => nil}}},
+          {'$project' => {
+            '_id' => 0,
+            'parent_id' => "$#{child_key}",
+            parent_key => '$$ROOT'}
+          }
+      ])
     end
 
     def group_and_update(group_spec, one_spec)

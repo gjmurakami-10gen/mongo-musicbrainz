@@ -8,12 +8,72 @@
   * {'$unwind' => '$parent_id'}
   * {'$unwind' => "$#{parent_key}"}
   * {'$group' => {'_id' => '$parent_id', parent_key => {'$push' => "$#{parent_key"}}
+
+    def agg_copy(source_coll, dest_coll, pipeline)
+      source_coll.aggregate(pipeline, :cursor => {}).each_slice(SLICE_SIZE) do |docs|
+        bulk = dest_coll.initialize_unordered_bulk_op
+        docs.each{|doc| bulk.insert(doc)}
+        bulk.execute
+        print ">#{docs.count}"
+        STDOUT.flush
+      end
+    end
+
+    def copy_one_with_parent_id(parent_key, child_name, child_key)
+      @child_coll = @db[child_name]
+      @child_count = @child_coll.count
+      @child_key = child_key
+      @child_hash = {}
+      @temp_one_coll = @db["#{@parent_name}_temp_one_coll"]
+      agg_copy(@child_coll, @temp_one_coll, [
+        {'$project' => {
+          'child_name' => child_name,
+          'merge_id' => "$#{child_key}",
+          parent_key => '$$ROOT'
+        }
+      ])
+      agg_copy(@parent_coll, @temp_one_coll, [
+        {'$match' => {parent_key => {'$type' => 16}},
+        {'$project' => {
+          'child_name' => child_name,
+          'merge_id' => "$#{parent_key}",
+          'parent_id' => "$_id"
+        }
+      ])
+      agg_copy(@parent_coll, @temp_one_coll, [
+        {'$match' => {parent_key => {'$type' => 3}},
+        {'$project' => {
+          'child_name' => child_name,
+          'merge_id' => "$#{parent_key}.#{child_key}",
+          'parent_id' => "$_id"
+        }
+      ])
+    end
+
+    def merge_one_all(parent_keys)
+      push = Hash[*parent_keys.collect{|key| [key, {'$push' => "$#{key}"}]}.flatten]
+      unwind = parent_keys.collect{|key| {'$unwind' => "$#{key}"} }
+      agg_copy(@temp_one_coll, @temp_coll, [
+        {'$group' => {
+          '_id' => {'child_name' => '$child_name', 'merge_id' => '$merge_id'},
+          'parent_id' => {'$push' => 'parent_id'}
+        }.merge(push),
+        {'$unwind' => '$parent_id'},
+        unwind,
+        {'$group' => {
+          '_id' => '$parent_id'
+        }.merge(push),
+        unwind
+      ].flatten
+    end
+
 * aggregation merge many
   * move merged marker out of merge_agg into Rakefile, re-evaluate
   * optimize solo merge one (?)
 * User Interface
   * reconsider with origin from both AR and MongoDB from scratch
   * USAGE
+
       usage: MONGODB_URI='mongodb://localhost:27017/database_name' #{$0} parent_collection merge_spec ...
       where: merge_spec: merge_one_spec | merge_many_spec
              merge_one_spec: foreign_key:child_collection.child_key
