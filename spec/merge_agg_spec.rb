@@ -41,7 +41,7 @@ describe MongoMerge::Combinator do
           :before => {
               :people => [
                   {"_id" => 11, "name" => "Joe", "gender" => 1, "alias" => 1},
-                  {"_id" => 22, "name" => "Jane", "gender" => 2, "alias" => 2},
+                  {"_id" => 22, "name" => "Jane", "gender" => 2},
                   {"_id" => 33, "name" => "Other"}
               ],
               :gender => [
@@ -50,14 +50,13 @@ describe MongoMerge::Combinator do
                   {"_id" => 3, "name" => "Other"}
               ],
               :alias => [
-                  {"_id" => 1, "name" => "Joseph"},
-                  {"_id" => 2, "name" => "Janey"}
+                  {"_id" => 1, "name" => "Joseph"}
               ]
           },
           :after => {
               :people => [
                   {"_id"=>11, "name"=>"Joe", "gender"=>{"_id"=>1, "name"=>"Male"}, "alias" => {"_id" => 1, "name" => "Joseph"}},
-                  {"_id"=>22, "name"=>"Jane", "gender"=>{"_id"=>2, "name"=>"Female"}, "alias" => {"_id" => 2, "name" => "Janey"}},
+                  {"_id"=>22, "name"=>"Jane", "gender"=>{"_id"=>2, "name"=>"Female"}},
                   {"_id"=>33, "name"=>"Other"}
               ]
           }
