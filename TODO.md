@@ -21,9 +21,6 @@
 
     def copy_one_with_parent_id(parent_key, child_name, child_key)
       @child_coll = @db[child_name]
-      @child_count = @child_coll.count
-      @child_key = child_key
-      @child_hash = {}
       @temp_one_coll = @db["#{@parent_name}_temp_one_coll"]
       agg_copy(@child_coll, @temp_one_coll, [
         {'$project' => {
@@ -33,7 +30,7 @@
         }
       ])
       agg_copy(@parent_coll, @temp_one_coll, [
-        {'$match' => {parent_key => {'$type' => 16}},
+        {'$match' => {parent_key => {'$not' => {'$type' => 3}}}},
         {'$project' => {
           'child_name' => child_name,
           'merge_id' => "$#{parent_key}",
@@ -41,7 +38,7 @@
         }
       ])
       agg_copy(@parent_coll, @temp_one_coll, [
-        {'$match' => {parent_key => {'$type' => 3}},
+        {'$match' => {parent_key => {'$type' => 3}}},
         {'$project' => {
           'child_name' => child_name,
           'merge_id' => "$#{parent_key}.#{child_key}",
@@ -64,7 +61,7 @@
           '_id' => '$parent_id'
         }.merge(push),
         unwind
-      ].flatten
+      ].flatten)
     end
 
 * aggregation merge many

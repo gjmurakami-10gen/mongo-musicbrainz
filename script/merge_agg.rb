@@ -117,13 +117,12 @@ module MongoMerge
 
     def group_and_update(group_spec, one_spec)
       doc_count = 0
-      pipeline = [{'$group' => group_spec}] + one_spec.collect{|spec| {'$unwind' => "$#{spec}"} }
+      pipeline = [{'$group' => group_spec}] + one_spec.collect{|spec| {'$unwind' => "$#{spec[1]}"} }
       @temp_coll.aggregate(pipeline, :cursor => {}, :allowDiskUse => true).each_slice(SLICE_SIZE) do |temp_docs| # :batch_size => BATCH_SIZE
         bulk = @parent_coll.initialize_unordered_bulk_op
         temp_docs.each do |doc|
           id = doc['_id']
           doc.delete('_id')
-          #one_spec.each{|spec| doc[spec] = doc[spec].first } #unwind above
           bulk.find({'_id' => id}).update_one({'$set' => doc})
         end
         bulk.execute
@@ -146,21 +145,22 @@ module MongoMerge
         @db.drop_collection(temp_name)
         @temp_coll = @db[temp_name]
         group_spec = {'_id' => '$parent_id'}
-        one_spec = []
-        @exanded_spec.each do |spec|
+        one_spec = @exanded_spec.select{|spec| spec.first == :one}
+        one_spec.each do |spec|
           x, parent_key, child_name, child_key = spec
           puts "info: spec: #{spec.inspect}"
           print "info: progress: "
-          if x == :one
-            copy_one_with_parent_id(parent_key, child_name, child_key)
-            group_spec.merge!(parent_key => {'$push' => "$#{parent_key}"})
-            one_spec << parent_key
-          elsif x == :many
-            copy_many_with_parent_id(parent_key, child_name, child_key)
-            group_spec.merge!(parent_key => {'$push' => "$#{parent_key}"})
-          else
-            raise "not reached"
-          end
+          copy_one_with_parent_id(parent_key, child_name, child_key)
+          group_spec.merge!(parent_key => {'$push' => "$#{parent_key}"})
+          puts
+        end
+        many_spec = @exanded_spec.select{|spec| spec.first == :many}
+        many_spec.each do |spec|
+          x, parent_key, child_name, child_key = spec
+          puts "info: spec: #{spec.inspect}"
+          print "info: progress: "
+          copy_many_with_parent_id(parent_key, child_name, child_key)
+          group_spec.merge!(parent_key => {'$push' => "$#{parent_key}"})
           puts
         end
         puts "info: group: #{@parent_name}"
