@@ -95,10 +95,11 @@ module MongoMerge
 
     def copy_many_with_parent_id(parent_key, child_name, child_key)
       child_coll = @db[child_name]
-      child_coll.find({child_key => {'$ne' => nil}}, :batch_size => BATCH_SIZE).each_slice(SLICE_SIZE) do |child_docs|
+      pipeline = [{'$match' => {child_key => {'$ne' => nil}}}, {'$project' => {'_id' => 0, 'parent_id' => "$#{child_key}", parent_key => '$$ROOT'}}]
+      child_coll.aggregate(pipeline, :cursor => {}).each_slice(SLICE_SIZE) do |child_docs|
         bulk = @temp_coll.initialize_unordered_bulk_op
         child_docs.each do |doc|
-          bulk.insert({'parent_id' => doc[child_key], parent_key => doc})
+          bulk.insert(doc)
         end
         bulk.execute
         print ">#{child_docs.count}"
