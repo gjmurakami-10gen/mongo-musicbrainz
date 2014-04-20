@@ -102,10 +102,7 @@ module MongoMerge
       doc_count
     end
 
-    def execute(parent_name, merge_spec)
-      one_spec = []
-      many_spec = []
-
+    def expand_spec(parent_name, merge_spec, one_spec, many_spec)
       merge_spec.collect do |child_spec|
         if (match_data = /^#{RE_PARENT_KEY}(:#{RE_CHILD_NAME}(\.#{RE_CHILD_KEY})?)?$/.match(child_spec))
           parent_key = match_data[:parent_key]
@@ -125,6 +122,13 @@ module MongoMerge
           raise "unrecognized merge spec:#{child.inspect}"
         end
       end
+    end
+
+    def execute(parent_name, merge_spec)
+      one_spec = []
+      many_spec = []
+
+      expand_spec(parent_name, merge_spec, one_spec, many_spec)
 
       mongo_client = Mongo::MongoClient.from_uri
       db = mongo_client.db
