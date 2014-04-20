@@ -83,9 +83,8 @@ module MongoMerge
         {'$project' => {'_id' => 0, 'merge_id' => "$#{parent_key}.#{child_key}", 'parent_id' => "$_id"}}
       ])
       agg_copy(@temp_one_coll, @temp_coll, [
-        {'$group' => {'_id' => '$merge_id', 'parent_id' => {'$push' => '$parent_id'}, parent_key => {'$push' => "$#{parent_key}"}}},
+        {'$group' => {'_id' => '$merge_id', 'parent_id' => {'$push' => '$parent_id'}, parent_key => {'$max' => "$#{parent_key}"}}},
         {'$unwind' => '$parent_id'},
-        {'$unwind' => "$#{parent_key}"},
         {'$project' => {'_id' => 0, 'parent_id' => '$parent_id', parent_key => "$#{parent_key}"}}
       ])
     end
@@ -102,24 +101,21 @@ module MongoMerge
       doc_count = 0
       pipeline = [{'$group' => group_spec}]
       @temp_coll.aggregate(pipeline, :cursor => {}, :allowDiskUse => true).each_slice(SLICE_SIZE) do |temp_docs| # :batch_size => BATCH_SIZE
+        count = 0
         bulk = @parent_coll.initialize_unordered_bulk_op
         temp_docs.each do |doc|
           id = doc['_id']
           doc.delete('_id')
-          doc.keys.each{|key|
-            val = doc[key]
-            if val.empty?
-              doc.delete(key)
-            elsif val.size == 1 && one_parent_keys.include?(key)
-              doc[key] = doc[key].first
-            end
-          }
-          bulk.find({'_id' => id}).update_one({'$set' => doc})
+          doc = doc.select{|key, value| !value.nil? && !value.empty?}
+          unless doc.empty?
+            bulk.find({'_id' => id}).update_one({'$set' => doc})
+            count += 1
+          end
         end
-        bulk.execute
-        print ">#{temp_docs.count}"
+        bulk.execute if count > 0
+        print ">#{count}"
         STDOUT.flush
-        doc_count += temp_docs.size
+        doc_count += count
       end
       doc_count
     end
@@ -142,7 +138,7 @@ module MongoMerge
           puts "info: spec: #{spec.inspect}"
           print "info: progress: "
           copy_one_with_parent_id(parent_key, child_name, child_key)
-          group_spec.merge!(parent_key => {'$push' => "$#{parent_key}"})
+          group_spec.merge!(parent_key => {'$max' => "$#{parent_key}"})
           puts
         end
         one_parent_keys = one_spec.collect{|spec| spec[1]}

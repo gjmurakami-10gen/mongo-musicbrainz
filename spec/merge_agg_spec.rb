@@ -32,11 +32,8 @@ describe MongoMerge::Combinator do
     before(:each) do
       @mongodb_uri = 'mongodb://localhost:27017/test_merge_1'
       ENV['MONGODB_URI'] = @mongodb_uri
-      @mongo_uri = Mongo::URIParser.new(ENV['MONGODB_URI'])
-      @db_name = @mongo_uri.db_name
-
       @mongo_client = Mongo::MongoClient.from_uri
-      @db = @mongo_client[@db_name]
+      @db = @mongo_client.db
       @data = {
           :before => {
               :people => [
@@ -65,7 +62,7 @@ describe MongoMerge::Combinator do
     end
 
     after(:each) do
-      @mongo_client.drop_database(@db_name)
+      @mongo_client.drop_database(@db.name)
     end
 
     it("should merge children into parent using aggregation") {
@@ -89,11 +86,8 @@ describe MongoMerge::Combinator do
     before(:each) do
       @mongodb_uri = 'mongodb://localhost:27017/test_merge_n'
       ENV['MONGODB_URI'] = @mongodb_uri
-      @mongo_uri = Mongo::URIParser.new(ENV['MONGODB_URI'])
-      @db_name = @mongo_uri.db_name
-
       @mongo_client = Mongo::MongoClient.from_uri
-      @db = @mongo_client[@db_name]
+      @db = @mongo_client.db
       @data = {
           :before => {
               :owner => [
@@ -149,7 +143,7 @@ describe MongoMerge::Combinator do
     end
 
     after(:each) do
-      @mongo_client.drop_database(@db_name)
+      @mongo_client.drop_database(@db.name)
     end
 
     it("should sort BSON::OrderedHash") {
@@ -174,6 +168,27 @@ describe MongoMerge::Combinator do
       match_fixture(@db, @data[:after])
     }
 
+  end
+
+  context "aggregation experiments" do
+    before(:each) do
+      @mongodb_uri = 'mongodb://localhost:27017/test_agg_exp'
+      ENV['MONGODB_URI'] = @mongodb_uri
+      @mongo_client = Mongo::MongoClient.from_uri
+      @db = @mongo_client.db
+    end
+
+    after(:each) do
+      @mongo_client.drop_database(@db.name)
+    end
+
+    it("should reduce array singletons") {
+      @coll = @db['test']
+      @coll.insert({'a' => [{'b' => 1}]})
+      #pipeline = [{'$project' => {'a' => '$a.0'}}]
+      pipeline = [{'$unwind' => '$a'}]
+      #p @coll.aggregate(pipeline).to_a
+    }
   end
 end
 

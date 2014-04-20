@@ -43,22 +43,19 @@
     end
 
     def merge_one_all(one_parent_keys)
-      push = Hash[*one_parent_keys.collect{|key| [key, {'$push' => "$#{key}"}]}.flatten]
-      unwind = one_parent_keys.collect{|key| {'$unwind' => "$#{key}"} }
+      accumulators = Hash[*one_parent_keys.collect{|key| [key, {'$max' => "$#{key}"}]}.flatten]
       agg_copy(@temp_one_coll, @temp_coll, [
         {'$group' => {
             '_id' => {'child_name' => '$child_name', 'merge_id' => '$merge_id'},
             'parent_id' => {'$push' => '$parent_id'}
-          }.merge(push)
+          }.merge(accumulators)
         },
         {'$unwind' => '$parent_id'},
-        #unwind,
         {'$group' => {
             '_id' => '$parent_id'
-           }.merge(push)
-        },
-        # unwind
-      ].flatten)
+           }.merge(accumulators)
+        }
+      ])
     end
 
 * aggregation merge many
