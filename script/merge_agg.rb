@@ -27,9 +27,7 @@ module MongoMerge
     SLICE_SIZE = 20_000
     BATCH_SIZE = 5 * SLICE_SIZE
 
-    MERGED_NAME = 'merged'
-
-    attr_reader :mongo_client, :db, :parent_coll, :parent_name, :expanded_spec # global hints
+    attr_reader :mongo_client, :db, :parent_coll, :parent_name, :expanded_spec # scope hints
 
     def initialize(parent_name, merge_spec)
       @parent_name = parent_name
@@ -133,15 +131,6 @@ module MongoMerge
       doc_count = 0
       @mongo_client = Mongo::MongoClient.from_uri
       @db = @mongo_client.db
-
-      merged_coll = @db[MERGED_NAME]
-      merge_stamp = @parent_name
-      unless merged_coll.find({merged: merge_stamp}).to_a.empty?
-        puts "info: merge skipped - already stamped in collection #{MERGED_NAME.inspect}"
-        @mongo_client.close
-        exit
-      end
-
       @parent_coll = @db[@parent_name]
       temp_name = "#{@parent_name}_merge_temp"
       temp_one_name = "#{@parent_name}_merge_temp_one"
@@ -180,11 +169,10 @@ module MongoMerge
       print "info: progress: "
       STDOUT.flush
       doc_count = group_and_update(temp_coll, all_accumulators)
-
       puts
+
       @db.drop_collection(temp_name)
       @db.drop_collection(temp_one_name)
-      merged_coll.insert({merged: merge_stamp})
       @mongo_client.close
       doc_count
     end

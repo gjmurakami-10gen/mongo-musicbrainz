@@ -1,6 +1,5 @@
 # TO DO
 
-* move merged marker out of merge_agg into Rakefile, re-evaluate
 * User Interface
   * reconsider with origin from both AR and MongoDB from scratch
   * USAGE

@@ -234,7 +234,7 @@ end
 desc "print indexes from schema - does not ensure indexes yet"
 task :indexes => 'schema/create_tables.json' do
   #client = Mongo::MongoClient.from_uri(MONGODB_URI)
-  #db = client[MONGO_DBNAME]
+  #db = client.db
   JSON.parse(IO.read('schema/create_tables.json')).each do |sql|
     if sql.has_key?('create_table')
       create_table = sql['create_table']
@@ -343,7 +343,17 @@ namespace :merge do
       end
     end
     task parent_collection.to_sym => dependencies do
-      sh "MONGODB_URI='#{MONGODB_URI}' time script/merge_agg.rb #{parent_collection} #{children.join(' ')}"
+      client = Mongo::MongoClient.from_uri(MONGODB_URI)
+      merged_name = 'merged'
+      merged_coll = client.db[merged_name]
+      merge_stamp = parent_collection
+      unless merged_coll.find({merged: merge_stamp}).to_a.empty?
+        puts "info: merge #{parent_collection.inspect} skipped - already stamped in collection #{merged_name.inspect}"
+      else
+        sh "MONGODB_URI='#{MONGODB_URI}' time script/merge_agg.rb #{parent_collection} #{children.join(' ')}"
+        merged_coll.insert({merged: merge_stamp})
+      end
+      client.close
     end
   end
   task :all => spec_group.collect{|spec|spec.first}
@@ -361,10 +371,11 @@ namespace :metrics do
   end
   task :mongo do
     client = Mongo::MongoClient.from_uri(MONGODB_URI)
-    db = client[MONGO_DBNAME]
+    db = client.db
     collection_names = (db.collection_names - ["system.indexes"]).sort
     coll_stats = collection_names.collect{|collection_name| db.command({collStats: collection_name})}
     puts JSON.pretty_generate(coll_stats)
+    client.close
   end
   task :dump do
     FileUtils.mkdir_p(DUMP_LATEST_DIR)
