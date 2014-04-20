@@ -184,10 +184,21 @@ describe MongoMerge::Combinator do
 
     it("should reduce array singletons") {
       @coll = @db['test']
-      @coll.insert({'a' => [{'b' => 1}]})
-      #pipeline = [{'$project' => {'a' => '$a.0'}}]
-      pipeline = [{'$unwind' => '$a'}]
-      #p @coll.aggregate(pipeline).to_a
+      docs = [
+        {'a' => 1},
+        {'a' => {'_id' => 3, 'name' => 'cat'}}
+      ]
+      @coll.insert(docs)
+      pipeline = [
+        {
+          '$project' => {
+            'merge_id' => {
+              '$ifNull' => ['$a._id', '$a']
+            }
+          }
+        }
+      ]
+      p @coll.aggregate(pipeline).to_a
     }
   end
 end

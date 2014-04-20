@@ -58,7 +58,7 @@ module MongoMerge
     end
 
     def agg_copy(source_coll, dest_coll, pipeline)
-      source_coll.aggregate(pipeline, :cursor => {}).each_slice(SLICE_SIZE) do |docs|
+      source_coll.aggregate(pipeline, :cursor => {}, :allowDiskUse => true).each_slice(SLICE_SIZE) do |docs|
         bulk = dest_coll.initialize_unordered_bulk_op
         docs.each{|doc| bulk.insert(doc)}
         bulk.execute
@@ -75,12 +75,10 @@ module MongoMerge
         {'$project' => {'_id' => 0, 'merge_id' => "$#{child_key}", parent_key => '$$ROOT'}}
       ])
       agg_copy(@parent_coll, @temp_one_coll, [
-        {'$match' => {parent_key => {'$not' => {'$type' => 3}}}},
-        {'$project' => {'_id' => 0, 'merge_id' => "$#{parent_key}", 'parent_id' => "$_id"}}
-      ])
-      agg_copy(@parent_coll, @temp_one_coll, [
-        {'$match' => {parent_key => {'$type' => 3}}},
-        {'$project' => {'_id' => 0, 'merge_id' => "$#{parent_key}.#{child_key}", 'parent_id' => "$_id"}}
+        {'$project' => {
+          '_id' => 0,
+          'merge_id' => {'$ifNull' => ["$#{parent_key}.#{child_key}", "$#{parent_key}"]},
+          'parent_id' => "$_id"}}
       ])
       agg_copy(@temp_one_coll, @temp_coll, [
         {'$group' => {'_id' => '$merge_id', 'parent_id' => {'$push' => '$parent_id'}, parent_key => {'$max' => "$#{parent_key}"}}},
