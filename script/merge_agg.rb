@@ -27,29 +27,8 @@ module MongoMerge
     SLICE_SIZE = 20_000
     BATCH_SIZE = 5 * SLICE_SIZE
 
-    attr_reader :mongo_client, :db, :parent_coll, :parent_name, :expanded_spec # scope hints
+    def initialize
 
-    def initialize(parent_name, merge_spec)
-      @parent_name = parent_name
-      @exanded_spec = merge_spec.collect do |child_spec|
-        if (match_data = /^#{RE_PARENT_KEY}(:#{RE_CHILD_NAME}(\.#{RE_CHILD_KEY})?)?$/.match(child_spec))
-          parent_key = match_data[:parent_key]
-          child_name = match_data[:child_name] || parent_key
-          child_name = parent_key if child_name.empty?
-          child_key = match_data[:child_key] || '_id'
-          child_key = '_id' if child_key.empty?
-          [:one, parent_key, child_name, child_key]
-        elsif (match_data = /^#{RE_PARENT_KEY}:\[#{RE_CHILD_NAME}(\.#{RE_CHILD_KEY})?\]$/.match(child_spec))
-          parent_key = match_data[:parent_key]
-          child_name = match_data[:child_name] || parent_key
-          child_name = parent_key if child_name.empty?
-          child_key = match_data[:child_key] || parent_name
-          child_key = parent_name if child_key.empty?
-          [:many, parent_key, child_name, child_key]
-        else
-          raise "unrecognized merge spec:#{child.inspect}"
-        end
-      end
     end
 
     def agg_copy(source_coll, dest_coll, pipeline)
@@ -62,57 +41,53 @@ module MongoMerge
       end
     end
 
-    def copy_one_with_merge_info(dest_coll, parent_key, child_name, child_key)
-      child_coll = @db[child_name]
-      agg_copy(child_coll, dest_coll, [
-          {'$project' => {'_id' => 0, 'child_name' => {'$literal' => child_name},
+    def child_by_merge_key(parent_key, child_name, child_key)
+      [
+          {'$project' => {
+              '_id' => 0, 'child_name' => {'$literal' => child_name},
               'merge_id' => "$#{child_key}",
-              parent_key => '$$ROOT'
-            }
+              parent_key => '$$ROOT'}
           }
-      ])
-      agg_copy(@parent_coll, dest_coll, [
-          {'$project' => {'_id' => 0, 'child_name' => {'$literal' => child_name},
-              'merge_id' => {'$ifNull' => ["$#{parent_key}.#{child_key}", "$#{parent_key}"]},
-              'parent_id' => "$_id"
-            }
-          }
-      ])
+      ]
     end
 
-    def merge_one_all(source_coll, dest_coll, accumulators, projectors)
-      agg_copy(source_coll, dest_coll, [
+    def parent_child_merge_key(parent_key, child_name, child_key)
+      [
+          {'$project' => {
+              '_id' => 0, 'child_name' => {'$literal' => child_name},
+              'merge_id' => {'$ifNull' => ["$#{parent_key}.#{child_key}", "$#{parent_key}"]},
+              'parent_id' => "$_id"}
+          }
+      ]
+    end
+
+    def merge_one_all(accumulators, projectors)
+      [
           {'$group' => {
               '_id' => {'child_name' => '$child_name', 'merge_id' => '$merge_id'},
-              'parent_id' => {'$push' => '$parent_id'}
-            }.merge(accumulators)
-          },
+              'parent_id' => {'$push' => '$parent_id'}}.merge(accumulators)},
           {'$unwind' => '$parent_id'},
           {'$group' => {
-              '_id' => '$parent_id'
-            }.merge(accumulators)
-          },
+              '_id' => '$parent_id'}.merge(accumulators)},
           {'$project' => {'_id' => 0, 'parent_id' => '$_id'}.merge(projectors)}
-      ])
+      ]
     end
 
-    def copy_many_with_parent_id(dest_coll, parent_key, child_name, child_key)
-      child_coll = @db[child_name]
-      agg_copy(child_coll, dest_coll, [
-        {'$match' => {child_key => {'$ne' => nil}}},
-        {'$project' => {'_id' => 0, 'parent_id' => "$#{child_key}", parent_key => '$$ROOT'}}
-      ])
+    def copy_many_with_parent_id(parent_key, child_name, child_key)
+      [
+          {'$match' => {child_key => {'$ne' => nil}}},
+          {'$project' => {'_id' => 0, 'parent_id' => "$#{child_key}", parent_key => '$$ROOT'}}
+      ]
     end
 
-    def group_and_update(source_coll, accumulators)
+    def group_and_update(source_coll, dest_coll, accumulators)
       doc_count = 0
       pipeline = [{'$group' => {'_id' => '$parent_id'}.merge(accumulators)}]
       source_coll.aggregate(pipeline, :cursor => {}, :allowDiskUse => true).each_slice(SLICE_SIZE) do |temp_docs| # :batch_size => BATCH_SIZE
         count = 0
-        bulk = @parent_coll.initialize_unordered_bulk_op
+        bulk = dest_coll.initialize_unordered_bulk_op
         temp_docs.each do |doc|
-          id = doc['_id']
-          doc.delete('_id')
+          id = doc.delete('_id')
           doc = doc.select{|key, value| !value.nil? && !value.empty?}
           unless doc.empty?
             bulk.find({'_id' => id}).update_one({'$set' => doc})
@@ -127,53 +102,76 @@ module MongoMerge
       doc_count
     end
 
-    def execute
-      doc_count = 0
-      @mongo_client = Mongo::MongoClient.from_uri
-      @db = @mongo_client.db
-      @parent_coll = @db[@parent_name]
-      temp_name = "#{@parent_name}_merge_temp"
-      temp_one_name = "#{@parent_name}_merge_temp_one"
-      @db.drop_collection(temp_name)
-      @db.drop_collection(temp_one_name)
-      temp_coll = @db[temp_name]
-      temp_one_coll = @db[temp_one_name]
+    def execute(parent_name, merge_spec)
+      one_spec = []
+      many_spec = []
+
+      merge_spec.collect do |child_spec|
+        if (match_data = /^#{RE_PARENT_KEY}(:#{RE_CHILD_NAME}(\.#{RE_CHILD_KEY})?)?$/.match(child_spec))
+          parent_key = match_data[:parent_key]
+          child_name = match_data[:child_name] || parent_key
+          child_name = parent_key if child_name.empty?
+          child_key = match_data[:child_key] || '_id'
+          child_key = '_id' if child_key.empty?
+          one_spec << [:one, parent_key, child_name, child_key]
+        elsif (match_data = /^#{RE_PARENT_KEY}:\[#{RE_CHILD_NAME}(\.#{RE_CHILD_KEY})?\]$/.match(child_spec))
+          parent_key = match_data[:parent_key]
+          child_name = match_data[:child_name] || parent_key
+          child_name = parent_key if child_name.empty?
+          child_key = match_data[:child_key] || parent_name
+          child_key = parent_name if child_key.empty?
+          many_spec << [:many, parent_key, child_name, child_key]
+        else
+          raise "unrecognized merge spec:#{child.inspect}"
+        end
+      end
+
+      mongo_client = Mongo::MongoClient.from_uri
+      db = mongo_client.db
+      parent_coll = db[parent_name]
+      temp_name = "#{parent_name}_merge_temp"
+      temp_one_name = "#{parent_name}_merge_temp_one"
+      db.drop_collection(temp_name)
+      db.drop_collection(temp_one_name)
+      temp_coll = db[temp_name]
+      temp_one_coll = db[temp_one_name]
       all_accumulators = {}
       one_accumulators = {}
       one_projectors = {}
 
-      one_spec = @exanded_spec.select{|spec| spec.first == :one}
       one_spec.each do |spec|
         x, parent_key, child_name, child_key = spec
         puts "info: spec: #{spec.inspect}"
         print "info: progress: "
-        copy_one_with_merge_info(temp_one_coll, parent_key, child_name, child_key)
+        child_coll = db[child_name]
+        agg_copy(child_coll, temp_one_coll, child_by_merge_key(parent_key, child_name, child_key))
+        agg_copy(parent_coll, temp_one_coll, parent_child_merge_key(parent_key, child_name, child_key))
         one_accumulators.merge!(parent_key => {'$max' => "$#{parent_key}"})
         one_projectors.merge!(parent_key => "$#{parent_key}")
         all_accumulators.merge!(parent_key => {'$max' => "$#{parent_key}"})
         puts
       end
-      merge_one_all(temp_one_coll, temp_coll, one_accumulators, one_projectors)
+      agg_copy(temp_one_coll, temp_coll, merge_one_all(one_accumulators, one_projectors))
 
-      many_spec = @exanded_spec.select{|spec| spec.first == :many}
       many_spec.each do |spec|
         x, parent_key, child_name, child_key = spec
         puts "info: spec: #{spec.inspect}"
         print "info: progress: "
-        copy_many_with_parent_id(temp_coll, parent_key, child_name, child_key)
+        child_coll = db[child_name]
+        agg_copy(child_coll, temp_coll, copy_many_with_parent_id(parent_key, child_name, child_key))
         all_accumulators.merge!(parent_key => {'$push' => "$#{parent_key}"})
         puts
       end
 
-      puts "info: group: #{@parent_name}"
+      puts "info: group: #{parent_name}"
       print "info: progress: "
       STDOUT.flush
-      doc_count = group_and_update(temp_coll, all_accumulators)
+      doc_count = group_and_update(temp_coll, parent_coll, all_accumulators)
       puts
 
-      @db.drop_collection(temp_name)
-      @db.drop_collection(temp_one_name)
-      @mongo_client.close
+      db.drop_collection(temp_name)
+      db.drop_collection(temp_one_name)
+      mongo_client.close
       doc_count
     end
 
@@ -190,10 +188,10 @@ if $0 == __FILE__
   EOT
   abort(USAGE) if ARGV.size < 2
   parent_name, *merge_spec = ARGV
-  combinator = MongoMerge::Combinator.new(parent_name, merge_spec)
+  combinator = MongoMerge::Combinator.new
   doc_count = 0
   tms = Benchmark.measure do
-    doc_count = combinator.execute
+    doc_count = combinator.execute(parent_name, merge_spec)
   end
   puts "info: real: #{'%.2f' % tms.real}, user: #{'%.2f' % tms.utime}, system:#{'%.2f' % tms.stime}, docs_per_sec: #{(doc_count.to_f/[tms.real, 0.000001].max).round}"
 end

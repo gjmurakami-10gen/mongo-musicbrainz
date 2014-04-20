@@ -66,16 +66,16 @@ describe MongoMerge::Combinator do
     end
 
     it("should merge children into parent using aggregation") {
-      combinator = MongoMerge::Combinator.new('people', ['gender', 'alias'])
-      combinator.execute
+      combinator = MongoMerge::Combinator.new
+      combinator.execute('people', ['gender', 'alias'])
       match_fixture(@db, @data[:after])
     }
     it("should remerge children into parent using aggregation") {
-      combinator = MongoMerge::Combinator.new('people', ['gender', 'alias'])
-      combinator.execute
+      combinator = MongoMerge::Combinator.new
+      combinator.execute('people', ['gender', 'alias'])
       match_fixture(@db, @data[:after])
       @db.drop_collection('merged')
-      combinator.execute
+      combinator.execute('people', ['gender', 'alias'])
       match_fixture(@db, @data[:after])
     }
 
@@ -155,16 +155,16 @@ describe MongoMerge::Combinator do
     }
 
     it("should merge children into parent using aggregation") {
-      combinator = MongoMerge::Combinator.new('owner', ['pet:[]', 'alias:[]'])
-      combinator.execute
+      combinator = MongoMerge::Combinator.new
+      combinator.execute('owner', ['pet:[]', 'alias:[]'])
       match_fixture(@db, @data[:after])
     }
     it("should re-merge children into parent using aggregation") {
-      combinator = MongoMerge::Combinator.new('owner', ['pet:[]', 'alias:[]'])
-      combinator.execute
+      combinator = MongoMerge::Combinator.new
+      combinator.execute('owner', ['pet:[]', 'alias:[]'])
       match_fixture(@db, @data[:after])
       @db.drop_collection('merged')
-      combinator.execute
+      combinator.execute('owner', ['pet:[]', 'alias:[]'])
       match_fixture(@db, @data[:after])
     }
 
