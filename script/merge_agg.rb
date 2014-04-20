@@ -106,11 +106,11 @@ module MongoMerge
         temp_docs.each do |doc|
           id = doc['_id']
           doc.delete('_id')
-          one_parent_keys.each{|key|
+          doc.keys.each{|key|
             val = doc[key]
             if val.empty?
               doc.delete(key)
-            else
+            elsif val.size == 1 && one_parent_keys.include?(key)
               doc[key] = doc[key].first
             end
           }

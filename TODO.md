@@ -9,16 +9,6 @@
   * {'$unwind' => "$#{parent_key}"}
   * {'$group' => {'_id' => '$parent_id', parent_key => {'$push' => "$#{parent_key"}}
 
-    def agg_copy(source_coll, dest_coll, pipeline)
-      source_coll.aggregate(pipeline, :cursor => {}).each_slice(SLICE_SIZE) do |docs|
-        bulk = dest_coll.initialize_unordered_bulk_op
-        docs.each{|doc| bulk.insert(doc)}
-        bulk.execute
-        print ">#{docs.count}"
-        STDOUT.flush
-      end
-    end
-
     def copy_one_with_parent_id(parent_key, child_name, child_key)
       @child_coll = @db[child_name]
       agg_copy(@child_coll, @temp_one_coll, [

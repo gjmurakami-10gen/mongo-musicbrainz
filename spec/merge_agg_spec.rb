@@ -113,7 +113,6 @@ describe MongoMerge::Combinator do
                   {"_id" => 1, "name" => "Joseph", "owner" => 11},
                   {"_id" => 2, "name" => "Janey", "owner" => 22},
                   {"_id" => 3, "name" => "JJ", "owner" => 22},
-                  {"_id" => 4, "name" => "John", "owner" => 33},
                   {"_id" => 5, "name" => "Jim"}
               ]
           },
@@ -141,9 +140,6 @@ describe MongoMerge::Combinator do
                    "pet" => [
                        {"_id" => 4, "name" => "Garfield", "owner" => 33}
                    ],
-                   "alias" => [
-                       {"_id" => 4, "name" => "John", "owner" => 33},
-                   ]
                   },
                   {"_id" => 44, "name" => "Other"}
               ]
