@@ -67,38 +67,54 @@ module MongoMerge
       end
     end
 
-    def copy_one_with_parent_id(parent_key, child_name, child_key)
-      @child_coll = @db[child_name]
-      @temp_one_coll = @db["#{@child_name}_temp_one_coll"]
-      @temp_one_coll.remove
-      agg_copy(@child_coll, @temp_one_coll, [
-        {'$project' => {'_id' => 0, 'merge_id' => "$#{child_key}", parent_key => '$$ROOT'}}
+    def copy_one_with_merge_info(dest_coll, parent_key, child_name, child_key)
+      child_coll = @db[child_name]
+      agg_copy(child_coll, dest_coll, [
+          {'$project' => {'_id' => 0, 'child_name' => {'$literal' => child_name},
+              'merge_id' => "$#{child_key}",
+              parent_key => '$$ROOT'
+            }
+          }
       ])
       agg_copy(@parent_coll, @temp_one_coll, [
-        {'$project' => {
-          '_id' => 0,
-          'merge_id' => {'$ifNull' => ["$#{parent_key}.#{child_key}", "$#{parent_key}"]},
-          'parent_id' => "$_id"}}
-      ])
-      agg_copy(@temp_one_coll, @temp_coll, [
-        {'$group' => {'_id' => '$merge_id', 'parent_id' => {'$push' => '$parent_id'}, parent_key => {'$max' => "$#{parent_key}"}}},
-        {'$unwind' => '$parent_id'},
-        {'$project' => {'_id' => 0, 'parent_id' => '$parent_id', parent_key => "$#{parent_key}"}}
+          {'$project' => {'_id' => 0, 'child_name' => {'$literal' => child_name},
+              'merge_id' => {'$ifNull' => ["$#{parent_key}.#{child_key}", "$#{parent_key}"]},
+              'parent_id' => "$_id"
+            }
+          }
       ])
     end
 
-    def copy_many_with_parent_id(parent_key, child_name, child_key)
+    def merge_one_all(source_coll, dest_coll, one_parent_keys)
+      accumulators = Hash[*one_parent_keys.collect{|key| [key, {'$max' => "$#{key}"}]}.flatten]
+      projectors = Hash[*one_parent_keys.collect{|key| [key, "$#{key}"]}.flatten]
+      agg_copy(source_coll, dest_coll, [
+          {'$group' => {
+              '_id' => {'child_name' => '$child_name', 'merge_id' => '$merge_id'},
+              'parent_id' => {'$push' => '$parent_id'}
+            }.merge(accumulators)
+          },
+          {'$unwind' => '$parent_id'},
+          {'$group' => {
+              '_id' => '$parent_id'
+            }.merge(accumulators)
+          },
+          {'$project' => {'_id' => 0, 'parent_id' => '$_id'}.merge(projectors)}
+      ])
+    end
+
+    def copy_many_with_parent_id(dest_coll, parent_key, child_name, child_key)
       child_coll = @db[child_name]
-      agg_copy(child_coll, @temp_coll, [
+      agg_copy(child_coll, dest_coll, [
         {'$match' => {child_key => {'$ne' => nil}}},
         {'$project' => {'_id' => 0, 'parent_id' => "$#{child_key}", parent_key => '$$ROOT'}}
       ])
     end
 
-    def group_and_update(group_spec, one_parent_keys)
+    def group_and_update(source_coll, group_spec, one_parent_keys)
       doc_count = 0
       pipeline = [{'$group' => group_spec}]
-      @temp_coll.aggregate(pipeline, :cursor => {}, :allowDiskUse => true).each_slice(SLICE_SIZE) do |temp_docs| # :batch_size => BATCH_SIZE
+      source_coll.aggregate(pipeline, :cursor => {}, :allowDiskUse => true).each_slice(SLICE_SIZE) do |temp_docs| # :batch_size => BATCH_SIZE
         count = 0
         bulk = @parent_coll.initialize_unordered_bulk_op
         temp_docs.each do |doc|
@@ -127,32 +143,36 @@ module MongoMerge
       if merged_coll.find({merged: merge_stamp}).to_a.empty?
         @parent_coll = @db[@parent_name]
         temp_name = "#{@parent_name}_merge_temp"
+        temp_one_name = "#{@parent_name}_merge_temp_one"
         @db.drop_collection(temp_name)
+        @db.drop_collection(temp_one_name)
         @temp_coll = @db[temp_name]
+        @temp_one_coll = @db[temp_one_name]
         group_spec = {'_id' => '$parent_id'}
         one_spec = @exanded_spec.select{|spec| spec.first == :one}
         one_spec.each do |spec|
           x, parent_key, child_name, child_key = spec
           puts "info: spec: #{spec.inspect}"
           print "info: progress: "
-          copy_one_with_parent_id(parent_key, child_name, child_key)
+          copy_one_with_merge_info(@temp_one_coll, parent_key, child_name, child_key)
           group_spec.merge!(parent_key => {'$max' => "$#{parent_key}"})
           puts
         end
         one_parent_keys = one_spec.collect{|spec| spec[1]}
+        merge_one_all(@temp_one_coll, @temp_coll, one_parent_keys)
         many_spec = @exanded_spec.select{|spec| spec.first == :many}
         many_spec.each do |spec|
           x, parent_key, child_name, child_key = spec
           puts "info: spec: #{spec.inspect}"
           print "info: progress: "
-          copy_many_with_parent_id(parent_key, child_name, child_key)
+          copy_many_with_parent_id(@temp_coll, parent_key, child_name, child_key)
           group_spec.merge!(parent_key => {'$push' => "$#{parent_key}"})
           puts
         end
         puts "info: group: #{@parent_name}"
         print "info: progress: "
         STDOUT.flush
-        doc_count = group_and_update(group_spec, one_parent_keys)
+        doc_count = group_and_update(@temp_coll, group_spec, one_parent_keys)
         puts
         @db.drop_collection(temp_name)
         merged_coll.insert({merged: merge_stamp})

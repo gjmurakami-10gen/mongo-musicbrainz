@@ -1,66 +1,6 @@
 # TO DO
 
-* aggregation merge one
-  * parent_doc, parent_key, child_doc, child_key
-  * child {'child_name' => child_name, 'merge_id' => child_doc[child_key], parent_key => child_doc}
-  * parent {'child_name' => child_name, 'merge_id' => parent_doc[parent_key], 'parent_id' => parent_doc['_id']}
-  * {'$group' => {'_id' => {'child_name' => 'child_name', 'merge_id' => '$merge_id'}, 'parent_id' => {'$push' => 'parent_id'}, parent_key => {'$push' => "$#{parent_key"}}
-  * {'$unwind' => '$parent_id'}
-  * {'$unwind' => "$#{parent_key}"}
-  * {'$group' => {'_id' => '$parent_id', parent_key => {'$push' => "$#{parent_key"}}
-
-    def copy_one_with_parent_id(parent_key, child_name, child_key)
-      @child_coll = @db[child_name]
-      agg_copy(@child_coll, @temp_one_coll, [
-          {'$project' => {
-              '_id' => 0,
-              'child_name' => {'$literal' => child_name},
-              'merge_id' => "$#{child_key}",
-              parent_key => '$$ROOT'
-            }
-          }
-      ])
-      agg_copy(@parent_coll, @temp_one_coll, [
-          {'$match' => {parent_key => {'$not' => {'$type' => 3}}}},
-          {'$project' => {
-              '_id' => 0,
-              'child_name' => {'$literal' => child_name},
-              'merge_id' => "$#{parent_key}",
-              'parent_id' => "$_id"
-            }
-          }
-      ])
-      agg_copy(@parent_coll, @temp_one_coll, [
-          {'$match' => {parent_key => {'$type' => 3}}},
-          {'$project' => {
-              '_id' => 0,
-              'child_name' => {'$literal' => child_name},
-              'merge_id' => "$#{parent_key}.#{child_key}",
-              'parent_id' => "$_id"
-            }
-          }
-      ])
-    end
-
-    def merge_one_all(one_parent_keys)
-      accumulators = Hash[*one_parent_keys.collect{|key| [key, {'$max' => "$#{key}"}]}.flatten]
-      agg_copy(@temp_one_coll, @temp_coll, [
-        {'$group' => {
-            '_id' => {'child_name' => '$child_name', 'merge_id' => '$merge_id'},
-            'parent_id' => {'$push' => '$parent_id'}
-          }.merge(accumulators)
-        },
-        {'$unwind' => '$parent_id'},
-        {'$group' => {
-            '_id' => '$parent_id'
-           }.merge(accumulators)
-        }
-      ])
-    end
-
-* aggregation merge many
-  * move merged marker out of merge_agg into Rakefile, re-evaluate
-  * optimize solo merge one (?)
+* move merged marker out of merge_agg into Rakefile, re-evaluate
 * User Interface
   * reconsider with origin from both AR and MongoDB from scratch
   * USAGE

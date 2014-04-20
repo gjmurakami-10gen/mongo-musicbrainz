@@ -171,6 +171,7 @@ describe MongoMerge::Combinator do
   end
 
   context "aggregation experiments" do
+
     before(:each) do
       @mongodb_uri = 'mongodb://localhost:27017/test_agg_exp'
       ENV['MONGODB_URI'] = @mongodb_uri
@@ -182,24 +183,6 @@ describe MongoMerge::Combinator do
       @mongo_client.drop_database(@db.name)
     end
 
-    it("should reduce array singletons") {
-      @coll = @db['test']
-      docs = [
-        {'a' => 1},
-        {'a' => {'_id' => 3, 'name' => 'cat'}}
-      ]
-      @coll.insert(docs)
-      pipeline = [
-        {
-          '$project' => {
-            'merge_id' => {
-              '$ifNull' => ['$a._id', '$a']
-            }
-          }
-        }
-      ]
-      p @coll.aggregate(pipeline).to_a
-    }
   end
 end
 
