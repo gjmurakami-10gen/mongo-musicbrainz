@@ -17,10 +17,6 @@ require 'mongo'
 require 'benchmark'
 require 'pp'
 
-def hash_by_key(a, key)
-  Hash[*a.collect{|e| [e[key], e]}.flatten(1)]
-end
-
 module MongoMerge
   class Combinator
 
@@ -28,11 +24,12 @@ module MongoMerge
     RE_CHILD_NAME = '(?<child_name>[^.\\[\\]]*)?'
     RE_CHILD_KEY = '(?<child_key>[^\\[\\]]*)'
 
-    THRESHOLD = 80_000 # 100_000 fails in hash_by_key with stack level too deep (SystemStackError)
     SLICE_SIZE = 20_000
     BATCH_SIZE = 5 * SLICE_SIZE
 
     MERGED_NAME = 'merged'
+
+    attr_reader :mongo_client, :db, :parent_coll, :parent_name, :expanded_spec # global hints
 
     def initialize(parent_name, merge_spec)
       @parent_name = parent_name
@@ -48,8 +45,8 @@ module MongoMerge
           parent_key = match_data[:parent_key]
           child_name = match_data[:child_name] || parent_key
           child_name = parent_key if child_name.empty?
-          child_key = match_data[:child_key] || @parent_name
-          child_key = @parent_name if child_key.empty?
+          child_key = match_data[:child_key] || parent_name
+          child_key = parent_name if child_key.empty?
           [:many, parent_key, child_name, child_key]
         else
           raise "unrecognized merge spec:#{child.inspect}"
@@ -85,9 +82,7 @@ module MongoMerge
       ])
     end
 
-    def merge_one_all(source_coll, dest_coll, one_parent_keys)
-      accumulators = Hash[*one_parent_keys.collect{|key| [key, {'$max' => "$#{key}"}]}.flatten]
-      projectors = Hash[*one_parent_keys.collect{|key| [key, "$#{key}"]}.flatten]
+    def merge_one_all(source_coll, dest_coll, accumulators, projectors)
       agg_copy(source_coll, dest_coll, [
           {'$group' => {
               '_id' => {'child_name' => '$child_name', 'merge_id' => '$merge_id'},
@@ -111,9 +106,9 @@ module MongoMerge
       ])
     end
 
-    def group_and_update(source_coll, group_spec, one_parent_keys)
+    def group_and_update(source_coll, accumulators)
       doc_count = 0
-      pipeline = [{'$group' => group_spec}]
+      pipeline = [{'$group' => {'_id' => '$parent_id'}.merge(accumulators)}]
       source_coll.aggregate(pipeline, :cursor => {}, :allowDiskUse => true).each_slice(SLICE_SIZE) do |temp_docs| # :batch_size => BATCH_SIZE
         count = 0
         bulk = @parent_coll.initialize_unordered_bulk_op
@@ -138,47 +133,58 @@ module MongoMerge
       doc_count = 0
       @mongo_client = Mongo::MongoClient.from_uri
       @db = @mongo_client.db
+
       merged_coll = @db[MERGED_NAME]
       merge_stamp = @parent_name
-      if merged_coll.find({merged: merge_stamp}).to_a.empty?
-        @parent_coll = @db[@parent_name]
-        temp_name = "#{@parent_name}_merge_temp"
-        temp_one_name = "#{@parent_name}_merge_temp_one"
-        @db.drop_collection(temp_name)
-        @db.drop_collection(temp_one_name)
-        temp_coll = @db[temp_name]
-        temp_one_coll = @db[temp_one_name]
-        group_spec = {'_id' => '$parent_id'}
-        one_spec = @exanded_spec.select{|spec| spec.first == :one}
-        one_spec.each do |spec|
-          x, parent_key, child_name, child_key = spec
-          puts "info: spec: #{spec.inspect}"
-          print "info: progress: "
-          copy_one_with_merge_info(temp_one_coll, parent_key, child_name, child_key)
-          group_spec.merge!(parent_key => {'$max' => "$#{parent_key}"})
-          puts
-        end
-        one_parent_keys = one_spec.collect{|spec| spec[1]}
-        merge_one_all(temp_one_coll, temp_coll, one_parent_keys)
-        many_spec = @exanded_spec.select{|spec| spec.first == :many}
-        many_spec.each do |spec|
-          x, parent_key, child_name, child_key = spec
-          puts "info: spec: #{spec.inspect}"
-          print "info: progress: "
-          copy_many_with_parent_id(temp_coll, parent_key, child_name, child_key)
-          group_spec.merge!(parent_key => {'$push' => "$#{parent_key}"})
-          puts
-        end
-        puts "info: group: #{@parent_name}"
-        print "info: progress: "
-        STDOUT.flush
-        doc_count = group_and_update(temp_coll, group_spec, one_parent_keys)
-        puts
-        @db.drop_collection(temp_name)
-        merged_coll.insert({merged: merge_stamp})
-      else
-        puts "info: merge skipped - already stamped in collection 'merged'"
+      unless merged_coll.find({merged: merge_stamp}).to_a.empty?
+        puts "info: merge skipped - already stamped in collection #{MERGED_NAME.inspect}"
+        @mongo_client.close
+        exit
       end
+
+      @parent_coll = @db[@parent_name]
+      temp_name = "#{@parent_name}_merge_temp"
+      temp_one_name = "#{@parent_name}_merge_temp_one"
+      @db.drop_collection(temp_name)
+      @db.drop_collection(temp_one_name)
+      temp_coll = @db[temp_name]
+      temp_one_coll = @db[temp_one_name]
+      all_accumulators = {}
+      one_accumulators = {}
+      one_projectors = {}
+
+      one_spec = @exanded_spec.select{|spec| spec.first == :one}
+      one_spec.each do |spec|
+        x, parent_key, child_name, child_key = spec
+        puts "info: spec: #{spec.inspect}"
+        print "info: progress: "
+        copy_one_with_merge_info(temp_one_coll, parent_key, child_name, child_key)
+        one_accumulators.merge!(parent_key => {'$max' => "$#{parent_key}"})
+        one_projectors.merge!(parent_key => "$#{parent_key}")
+        all_accumulators.merge!(parent_key => {'$max' => "$#{parent_key}"})
+        puts
+      end
+      merge_one_all(temp_one_coll, temp_coll, one_accumulators, one_projectors)
+
+      many_spec = @exanded_spec.select{|spec| spec.first == :many}
+      many_spec.each do |spec|
+        x, parent_key, child_name, child_key = spec
+        puts "info: spec: #{spec.inspect}"
+        print "info: progress: "
+        copy_many_with_parent_id(temp_coll, parent_key, child_name, child_key)
+        all_accumulators.merge!(parent_key => {'$push' => "$#{parent_key}"})
+        puts
+      end
+
+      puts "info: group: #{@parent_name}"
+      print "info: progress: "
+      STDOUT.flush
+      doc_count = group_and_update(temp_coll, all_accumulators)
+
+      puts
+      @db.drop_collection(temp_name)
+      @db.drop_collection(temp_one_name)
+      merged_coll.insert({merged: merge_stamp})
       @mongo_client.close
       doc_count
     end
