@@ -76,7 +76,7 @@ module MongoMerge
             }
           }
       ])
-      agg_copy(@parent_coll, @temp_one_coll, [
+      agg_copy(@parent_coll, dest_coll, [
           {'$project' => {'_id' => 0, 'child_name' => {'$literal' => child_name},
               'merge_id' => {'$ifNull' => ["$#{parent_key}.#{child_key}", "$#{parent_key}"]},
               'parent_id' => "$_id"
@@ -146,33 +146,33 @@ module MongoMerge
         temp_one_name = "#{@parent_name}_merge_temp_one"
         @db.drop_collection(temp_name)
         @db.drop_collection(temp_one_name)
-        @temp_coll = @db[temp_name]
-        @temp_one_coll = @db[temp_one_name]
+        temp_coll = @db[temp_name]
+        temp_one_coll = @db[temp_one_name]
         group_spec = {'_id' => '$parent_id'}
         one_spec = @exanded_spec.select{|spec| spec.first == :one}
         one_spec.each do |spec|
           x, parent_key, child_name, child_key = spec
           puts "info: spec: #{spec.inspect}"
           print "info: progress: "
-          copy_one_with_merge_info(@temp_one_coll, parent_key, child_name, child_key)
+          copy_one_with_merge_info(temp_one_coll, parent_key, child_name, child_key)
           group_spec.merge!(parent_key => {'$max' => "$#{parent_key}"})
           puts
         end
         one_parent_keys = one_spec.collect{|spec| spec[1]}
-        merge_one_all(@temp_one_coll, @temp_coll, one_parent_keys)
+        merge_one_all(temp_one_coll, temp_coll, one_parent_keys)
         many_spec = @exanded_spec.select{|spec| spec.first == :many}
         many_spec.each do |spec|
           x, parent_key, child_name, child_key = spec
           puts "info: spec: #{spec.inspect}"
           print "info: progress: "
-          copy_many_with_parent_id(@temp_coll, parent_key, child_name, child_key)
+          copy_many_with_parent_id(temp_coll, parent_key, child_name, child_key)
           group_spec.merge!(parent_key => {'$push' => "$#{parent_key}"})
           puts
         end
         puts "info: group: #{@parent_name}"
         print "info: progress: "
         STDOUT.flush
-        doc_count = group_and_update(@temp_coll, group_spec, one_parent_keys)
+        doc_count = group_and_update(temp_coll, group_spec, one_parent_keys)
         puts
         @db.drop_collection(temp_name)
         merged_coll.insert({merged: merge_stamp})
