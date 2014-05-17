@@ -1,106 +1,7 @@
 #include <mongoc.h>
 #include <stdio.h>
 #include <bcon.h>
-
-#define WARN_ERROR \
-    (MONGOC_WARNING ("%s\n", error.message), true);
-#define EXIT \
-    ((void)printf ("%s:%u: failed execution\n", __FILE__, __LINE__), abort(), false)
-#define EX(e) \
-    ((void) ((e) ? 0 : __ex (#e, __FILE__, __LINE__)))
-#define __ex(e, file, line) \
-    ((void)printf ("%s:%u: failed execution `%s'\n", file, line, e), abort())
-#define ASSERT(e) \
-    assert(e)
-
-bson_t *
-bson_new_from_iter_document (bson_iter_t *iter)
-{
-   uint32_t document_len;
-   const uint8_t *document;
-   BSON_ITER_HOLDS_DOCUMENT (iter) || EXIT;
-   bson_iter_document (iter, &document_len, &document);
-   return bson_new_from_data (document, document_len);
-}
-
-bson_t *
-bson_new_from_iter_array (bson_iter_t *iter)
-{
-   bson_t *b;
-   bson_iter_t iter_array;
-   BSON_ITER_HOLDS_ARRAY (iter) || EXIT;
-   bson_iter_recurse (iter, &iter_array) || EXIT;
-   b = bson_new ();
-   while (bson_iter_next (&iter_array)) {
-      bson_t *bsub = bson_new_from_iter_document (&iter_array);
-      bson_append_document (b, bson_iter_key (&iter_array), -1, bsub) || EXIT;
-      bson_destroy (bsub);
-   }
-   return b;
-}
-
-void bson_printf (const char *format, bson_t *b)
-{
-   char *str;
-   str = bson_as_json (b, NULL);
-   printf (format, str);
-   bson_free (str);
-}
-
-void mongoc_cursor_dump (mongoc_cursor_t *cursor)
-{
-   const bson_t *doc;
-   while (mongoc_cursor_next (cursor, &doc)) {
-      char *str;
-      str = bson_as_json (doc, NULL);
-      printf ("%s\n", str);
-      bson_free (str);
-   }
-}
-
-void mongoc_collection_dump (mongoc_collection_t *collection)
-{
-   bson_t b = BSON_INITIALIZER;
-   mongoc_cursor_t *cursor;
-   cursor = mongoc_collection_find (collection, MONGOC_QUERY_NONE, 0, 0, 0, &b, NULL, NULL);
-   mongoc_cursor_dump (cursor);
-   mongoc_cursor_destroy (cursor);
-}
-
-bool mongoc_collection_remove_all (mongoc_collection_t *collection)
-{
-   bson_t b = BSON_INITIALIZER;
-   bool r;
-   bson_error_t error;
-   (r = mongoc_collection_delete (collection, MONGOC_DELETE_NONE, &b, NULL, &error)) || WARN_ERROR;
-   return (r);
-}
-
-/*
-mongoc_cursor_t               *mongoc_collection_aggregate_pipeline  (mongoc_collection_t           *collection,
-                                                                      mongoc_query_flags_t           flags,
-                                                                      const bson_t                  *pipeline,
-                                                                      const bson_t                  *options,
-                                                                      const mongoc_read_prefs_t     *read_prefs) BSON_GNUC_WARN_UNUSED_RESULT;
- */
-
-mongoc_cursor_t *
-mongoc_collection_aggregate_pipeline (mongoc_collection_t       *collection, /* IN */
-                                      mongoc_query_flags_t       flags,      /* IN */
-                                      const bson_t              *pipeline,   /* IN */
-                                      const bson_t              *options,    /* IN */
-                                      const mongoc_read_prefs_t *read_prefs) /* IN */
-{
-   bson_t *subpipeline;
-   bson_iter_t iter;
-   mongoc_cursor_t *cursor;
-
-   bson_iter_init_find (&iter, pipeline, "pipeline") || EXIT;
-   subpipeline = bson_new_from_iter_array (&iter);
-   cursor = mongoc_collection_aggregate (collection, flags, subpipeline, options, read_prefs);
-   bson_destroy (subpipeline);
-   return cursor;
-}
+#include "mongomerge.h"
 
 void load_test_single(mongoc_collection_t *collection)
 {
@@ -225,9 +126,9 @@ void load_fixture (mongoc_database_t *db, const char *fixture, const char *key)
    bson_iter_t iter_fixture, iter_collection;
 
    bson_init_from_json (&bson_fixture, fixture, strlen (fixture), &error) || WARN_ERROR;
-   bson_iter_init_find (&iter_fixture, &bson_fixture, key) || EXIT;
-   BSON_ITER_HOLDS_DOCUMENT (&iter_fixture) || EXIT;
-   bson_iter_recurse (&iter_fixture, &iter_collection) || EXIT;
+   bson_iter_init_find (&iter_fixture, &bson_fixture, key) || DIE;
+   BSON_ITER_HOLDS_DOCUMENT (&iter_fixture) || DIE;
+   bson_iter_recurse (&iter_fixture, &iter_collection) || DIE;
    while (bson_iter_next (&iter_collection)) {
        const char *collection_name;
        bson_iter_t iter_doc;
@@ -235,8 +136,8 @@ void load_fixture (mongoc_database_t *db, const char *fixture, const char *key)
        printf ("collection_name: \"%s\"\n", collection_name);
        collection = mongoc_database_get_collection (db, collection_name);
        mongoc_collection_drop (collection, &error);
-       BSON_ITER_HOLDS_ARRAY (&iter_collection) || EXIT;
-       bson_iter_recurse (&iter_collection, &iter_doc) || EXIT;
+       BSON_ITER_HOLDS_ARRAY (&iter_collection) || DIE;
+       bson_iter_recurse (&iter_collection, &iter_doc) || DIE;
        while (bson_iter_next (&iter_doc)) {
           bson_t *b = bson_new_from_iter_document (&iter_doc);
           mongoc_collection_insert (collection, MONGOC_INSERT_NONE, b, NULL, &error) || WARN_ERROR;
