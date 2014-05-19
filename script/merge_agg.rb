@@ -35,7 +35,12 @@ module MongoMerge
       source_coll.aggregate(pipeline, :cursor => {}, :allowDiskUse => true).each_slice(SLICE_SIZE) do |docs|
         bulk = dest_coll.initialize_unordered_bulk_op
         docs.each{|doc| bulk.insert(doc)}
-        bulk.execute
+        begin
+          bulk.execute
+        rescue => ex
+          puts "agg_copy exception: #{ex.inspect}"
+          raise ex
+        end
         print ">#{docs.count}"
         STDOUT.flush
       end
@@ -94,7 +99,12 @@ module MongoMerge
             count += 1
           end
         end
-        bulk.execute if count > 0
+        begin
+          bulk.execute if count > 0
+        rescue => ex
+          puts "group_and_update exception: #{ex.inspect}"
+          raise ex
+        end
         print ">#{count}"
         STDOUT.flush
         doc_count += count
