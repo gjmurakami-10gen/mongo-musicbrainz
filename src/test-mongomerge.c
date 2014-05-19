@@ -174,6 +174,21 @@ void test_merge (mongoc_database_t *db, mongoc_collection_t *collection)
    load_fixture (db, one_to_one_fixture, "before");
    load_fixture (db, one_to_many_fixture, "before");
    test_pipeline (collection);
+   bson_t *b = child_by_merge_key("parent", "child", "key");
+   bson_printf("child_by_merge_key: %s\n", b);
+   bson_destroy (b);
+   b = parent_child_merge_key("parent", "child", "key");
+   bson_printf("parent_child_merge_key: %s\n", b);
+   bson_destroy (b);
+   bson_t *accumulators = BCON_NEW("hello", "world");
+   bson_t *projectors = BCON_NEW("hello", "world");
+   b = merge_one_all(accumulators, projectors);
+   bson_printf("merge_one_all: %s\n", b);
+   bson_destroy (accumulators);
+   bson_destroy (projectors);
+   b = copy_many_with_parent_id("parent", "child", "key");
+   bson_printf("merge_one_all: %s\n", b);
+   bson_destroy (b);
 }
 
 int

@@ -88,18 +88,91 @@ mongoc_collection_aggregate_pipeline (mongoc_collection_t       *collection, /* 
    return cursor;
 }
 
-/*
-void child_by_merge_key(const char *parent_key, const char *child_name, const char *child_key)
-   bson_t pipeline;
-      [
-          {'$project' => {
-              '_id' => 0, 'child_name' => {'$literal' => child_name},
-              'merge_id' => "$#{child_key}",
-              parent_key => '$$ROOT'}
-          }
-      ]
+bson_t *
+child_by_merge_key(const char *parent_key, const char *child_name, const char *child_key)
+{
+   bson_t *b;
+   size_t dollar_child_key_size = strlen("$") + strlen(child_key);
+   char *dollar_child_key = bson_malloc (dollar_child_key_size + 1);
+   bson_snprintf (dollar_child_key, dollar_child_key_size, "$%s", child_key);
+   b = BCON_NEW (
+      "pipeline", "[",
+         "{",
+            "$project", "{",
+               "_id", BCON_INT32(0),
+               "child_name", "{", "$literal", child_name, "}",
+               "merge_id", dollar_child_key,
+               parent_key, "$$ROOT",
+            "}",
+         "}",
+      "]"
+   );
+   bson_free (dollar_child_key);
+   return b;
 }
-*/
+
+bson_t *
+parent_child_merge_key(const char *parent_key, const char *child_name, const char *child_key)
+{
+   bson_t *b;
+   size_t parent_key_dot_child_key_size = strlen("$") + strlen(parent_key) + strlen(".") + strlen(child_key);
+   char *parent_key_dot_child_key = bson_malloc (parent_key_dot_child_key_size + 1);
+   bson_snprintf (parent_key_dot_child_key, parent_key_dot_child_key_size, "$%s.%s", parent_key, child_key);
+   b = BCON_NEW (
+      "pipeline", "[",
+         "{",
+            "$project", "{",
+              "_id", BCON_INT32(0),
+              "child_name", "{", "$literal", child_name, "}",
+              "merge_id", "{", "$ifNull", "[", parent_key_dot_child_key, parent_key, "]", "}",
+              "parent_id", "$_id",
+            "}",
+         "}",
+      "]"
+   );
+   bson_free (parent_key_dot_child_key);
+   return b;
+}
+
+bson_t *
+merge_one_all(bson_t *accumulators, bson_t *projectors)
+{
+   bson_t *b;
+   b = BCON_NEW (
+      "pipeline", "[",
+         "{", "$group", "{",
+                 "_id", "{",
+                    "child_name", "$child_name",
+                    "merge_id", "$merge_id", "}",
+                 "parent_id", "{",
+                    "$push", "$parent_id", "}", "}", //.merge(accumulators)
+          "}",
+          "{", "$unwind", "$parent_id", "}",
+          "{", "$group", "{",
+                  "_id", "$parent_id", "}", //.merge(accumulators)
+          "}",
+          "{", "$project", "{",
+                  "_id", BCON_INT32(0),
+                  "parent_id", "$_id", "}", //.merge(projectors)
+          "}",
+      "]"
+   );
+   return b;
+}
+
+bson_t *
+copy_many_with_parent_id(const char *parent_key, const char *child_name, const char *child_key)
+{
+   return BCON_NEW (
+      "pipeline", "[",
+          "{", "$match", "{", child_key, "{", "$ne", BCON_NULL, "}", "}", "}",
+          "{", "$project", "{",
+                  "_id", BCON_INT32(0),
+                  "parent_id", "$#{child_key}",
+                  parent_key, "$$ROOT", "}", "}",
+      "]"
+   );
+}
 
 #ifdef MAIN
 int
