@@ -127,13 +127,13 @@ describe MongoMerge::Combinator do
                    ],
                    "alias" => [
                        {"_id" => 2, "name" => "Janey", "owner" => 22},
-                       {"_id" => 3, "name" => "JJ", "owner" => 22},
+                       {"_id" => 3, "name" => "JJ", "owner" => 22}
                    ]
                   },
                   {"_id" => 33, "name" => "Jack",
                    "pet" => [
                        {"_id" => 4, "name" => "Garfield", "owner" => 33}
-                   ],
+                   ]
                   },
                   {"_id" => 44, "name" => "Other"}
               ]
