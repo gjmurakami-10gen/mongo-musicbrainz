@@ -1,3 +1,24 @@
+/*
+ * Copyright 2014 MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * This program will scan each BSON document contained in the provided files
+ * and print metrics to STDOUT.
+ */
+
 #ifndef MONGOMERGE_H
 #define MONGOMERGE_H
 #include <mongoc.h>
@@ -51,5 +72,11 @@ merge_one_all(bson_t *accumulators, bson_t *projectors);
 
 bson_t *
 copy_many_with_parent_id(const char *parent_key, const char *child_name, const char *child_key);
+
+bson_t *
+expand_spec(const char *parent_name, int merge_spec_count, char **merge_spec);
+
+void
+execute(const char *parent_name, int merge_spec_count, char **merge_spec);
 
 #endif

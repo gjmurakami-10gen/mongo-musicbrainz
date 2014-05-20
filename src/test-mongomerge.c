@@ -1,3 +1,24 @@
+/*
+ * Copyright 2014 MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * This program will scan each BSON document contained in the provided files
+ * and print metrics to STDOUT.
+ */
+
 #include <mongoc.h>
 #include <stdio.h>
 #include <bcon.h>
@@ -139,9 +160,9 @@ void load_fixture (mongoc_database_t *db, const char *fixture, const char *key)
        BSON_ITER_HOLDS_ARRAY (&iter_collection) || DIE;
        bson_iter_recurse (&iter_collection, &iter_doc) || DIE;
        while (bson_iter_next (&iter_doc)) {
-          bson_t *b = bson_new_from_iter_document (&iter_doc);
-          mongoc_collection_insert (collection, MONGOC_INSERT_NONE, b, NULL, &error) || WARN_ERROR;
-          bson_destroy (b);
+          bson_t *bson = bson_new_from_iter_document (&iter_doc);
+          mongoc_collection_insert (collection, MONGOC_INSERT_NONE, bson, NULL, &error) || WARN_ERROR;
+          bson_destroy (bson);
        }
        mongoc_collection_dump (collection);
        mongoc_collection_destroy (collection);
@@ -167,6 +188,16 @@ void test_pipeline (mongoc_collection_t *collection)
    bson_destroy (pipeline);
 }
 
+const char *merge_one_spec[] = {
+   "gender",
+   "alias"
+};
+
+const char *merge_many_spec[] = {
+   "pet:[]",
+   "alias:[]"
+};
+
 void test_merge (mongoc_database_t *db, mongoc_collection_t *collection)
 {
    load_test_single (collection);
@@ -174,21 +205,27 @@ void test_merge (mongoc_database_t *db, mongoc_collection_t *collection)
    load_fixture (db, one_to_one_fixture, "before");
    load_fixture (db, one_to_many_fixture, "before");
    test_pipeline (collection);
-   bson_t *b = child_by_merge_key("parent", "child", "key");
-   bson_printf("child_by_merge_key: %s\n", b);
-   bson_destroy (b);
-   b = parent_child_merge_key("parent", "child", "key");
-   bson_printf("parent_child_merge_key: %s\n", b);
-   bson_destroy (b);
+   bson_t *bson = child_by_merge_key("parent", "child", "key");
+   bson_printf("child_by_merge_key: %s\n", bson);
+   bson_destroy (bson);
+   bson = parent_child_merge_key("parent", "child", "key");
+   bson_printf("parent_child_merge_key: %s\n", bson);
+   bson_destroy (bson);
    bson_t *accumulators = BCON_NEW("hello", "world");
    bson_t *projectors = BCON_NEW("hello", "world");
-   b = merge_one_all(accumulators, projectors);
-   bson_printf("merge_one_all: %s\n", b);
+   bson = merge_one_all(accumulators, projectors);
+   bson_printf("merge_one_all: %s\n", bson);
    bson_destroy (accumulators);
    bson_destroy (projectors);
-   b = copy_many_with_parent_id("parent", "child", "key");
-   bson_printf("merge_one_all: %s\n", b);
-   bson_destroy (b);
+   bson = copy_many_with_parent_id("parent", "child", "key");
+   bson_printf("merge_one_all: %s\n", bson);
+   bson_destroy (bson);
+   bson = expand_spec ("people", sizeof(merge_one_spec)/sizeof(char*), (char**) merge_one_spec);
+   bson_printf("expand_spec people: %s\n", bson);
+   bson_destroy (bson);
+   bson = expand_spec ("owner", sizeof(merge_many_spec)/sizeof(char*), (char**) merge_many_spec);
+   bson_printf("expand_spec owner: %s\n", bson);
+   bson_destroy (bson);
 }
 
 int
