@@ -160,9 +160,9 @@ module MongoMerge
         child_coll = db[child_name]
         agg_copy(child_coll, temp_one_coll, child_by_merge_key(parent_key, child_name, child_key))
         agg_copy(parent_coll, temp_one_coll, parent_child_merge_key(parent_key, child_name, child_key))
+        all_accumulators.merge!(parent_key => {'$max' => "$#{parent_key}"})
         one_accumulators.merge!(parent_key => {'$max' => "$#{parent_key}"})
         one_projectors.merge!(parent_key => "$#{parent_key}")
-        all_accumulators.merge!(parent_key => {'$max' => "$#{parent_key}"})
         puts
       end
       agg_copy(temp_one_coll, temp_coll, merge_one_all(one_accumulators, one_projectors))

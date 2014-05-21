@@ -226,6 +226,8 @@ void test_merge (mongoc_database_t *db, mongoc_collection_t *collection)
    bson = expand_spec ("owner", sizeof(merge_many_spec)/sizeof(char*), (char**) merge_many_spec);
    bson_printf("expand_spec owner: %s\n", bson);
    bson_destroy (bson);
+   execute ("people", sizeof(merge_one_spec)/sizeof(char*), (char**) merge_one_spec);
+   execute ("owner", sizeof(merge_many_spec)/sizeof(char*), (char**) merge_many_spec);
 }
 
 int

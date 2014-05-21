@@ -23,6 +23,15 @@
 #include <stdio.h>
 #include "mongomerge.h"
 
+char *
+str_compose(const char *s1, const char *s2)
+{
+   size_t len = strlen(s1) + strlen(s2) + 1;
+   char *s = bson_malloc (len);
+   bson_snprintf (s, len, "%s%s", s1, s2);
+   return s;
+}
+
 bson_t *
 bson_new_from_iter_document (bson_iter_t *iter)
 {
@@ -53,10 +62,19 @@ void
 bson_printf (const char *format,
              bson_t     *bson)
 {
-   char *str;
+   const char *str;
    str = bson_as_json (bson, NULL);
    printf (format, str);
-   bson_free (str);
+   bson_free ((void*)str);
+}
+
+const char *
+bson_iter_next_utf8 (bson_iter_t *iter,
+                     uint32_t     *length)
+{
+    bson_iter_next (iter) || DIE;
+    BSON_ITER_HOLDS_UTF8 (iter) || DIE;
+    return bson_iter_utf8 (iter, length);
 }
 
 void
@@ -64,10 +82,10 @@ mongoc_cursor_dump (mongoc_cursor_t *cursor)
 {
    const bson_t *doc;
    while (mongoc_cursor_next (cursor, &doc)) {
-      char *str;
+      const char *str;
       str = bson_as_json (doc, NULL);
       printf ("%s\n", str);
-      bson_free (str);
+      bson_free ((void*)str);
    }
 }
 
@@ -113,9 +131,7 @@ bson_t *
 child_by_merge_key(const char *parent_key, const char *child_name, const char *child_key)
 {
    bson_t *bson;
-   size_t dollar_child_key_size = strlen("$") + strlen(child_key);
-   char *dollar_child_key = bson_malloc (dollar_child_key_size + 1);
-   bson_snprintf (dollar_child_key, dollar_child_key_size, "$%s", child_key);
+   const char *dollar_child_key = str_compose ("$", child_key);
    bson = BCON_NEW (
       "pipeline", "[",
          "{",
@@ -128,7 +144,7 @@ child_by_merge_key(const char *parent_key, const char *child_name, const char *c
          "}",
       "]"
    );
-   bson_free (dollar_child_key);
+   bson_free ((void*)dollar_child_key);
    return bson;
 }
 
@@ -136,8 +152,8 @@ bson_t *
 parent_child_merge_key(const char *parent_key, const char *child_name, const char *child_key)
 {
    bson_t *bson;
-   size_t parent_key_dot_child_key_size = strlen("$") + strlen(parent_key) + strlen(".") + strlen(child_key);
-   char *parent_key_dot_child_key = bson_malloc (parent_key_dot_child_key_size + 1);
+   size_t parent_key_dot_child_key_size = strlen("$") + strlen(parent_key) + strlen(".") + strlen(child_key) + 1;
+   char *parent_key_dot_child_key = bson_malloc (parent_key_dot_child_key_size);
    bson_snprintf (parent_key_dot_child_key, parent_key_dot_child_key_size, "$%s.%s", parent_key, child_key);
    bson = BCON_NEW (
       "pipeline", "[",
@@ -166,15 +182,15 @@ merge_one_all(bson_t *accumulators, bson_t *projectors)
                     "child_name", "$child_name",
                     "merge_id", "$merge_id", "}",
                  "parent_id", "{",
-                    "$push", "$parent_id", "}", "}", //.merge(accumulators)
+                    "$push", "$parent_id", BCON(accumulators), "}", "}",
           "}",
           "{", "$unwind", "$parent_id", "}",
           "{", "$group", "{",
-                  "_id", "$parent_id", "}", //.merge(accumulators)
+                  "_id", "$parent_id", BCON(accumulators), "}",
           "}",
           "{", "$project", "{",
                   "_id", BCON_INT32(0),
-                  "parent_id", "$_id", "}", //.merge(projectors)
+                  "parent_id", "$_id", BCON(projectors), "}",
           "}",
       "]"
    );
@@ -184,15 +200,18 @@ merge_one_all(bson_t *accumulators, bson_t *projectors)
 bson_t *
 copy_many_with_parent_id(const char *parent_key, const char *child_name, const char *child_key)
 {
-   return BCON_NEW (
+   const char *dollar_child_key = str_compose("$", child_key);
+   bson_t *bson = BCON_NEW (
       "pipeline", "[",
           "{", "$match", "{", child_key, "{", "$ne", BCON_NULL, "}", "}", "}",
           "{", "$project", "{",
                   "_id", BCON_INT32(0),
-                  "parent_id", "$#{child_key}",
+                  "parent_id", dollar_child_key,
                   parent_key, "$$ROOT", "}", "}",
       "]"
    );
+   bson_free ((void*)dollar_child_key);
+   return bson;
 }
 
 bson_t *
@@ -226,7 +245,7 @@ expand_spec(const char *parent_name, int merge_spec_count, char **merge_spec)
          (terminator != NULL && *(terminator + 1) == '\0') || DIE;
          *terminator = '\0';
          relation = "many";
-         child_key = parent_name;
+         child_key = (char*)parent_name;
       }
       char *dot = strchr(child_s, '.');
       if (dot != NULL) {
@@ -248,9 +267,99 @@ expand_spec(const char *parent_name, int merge_spec_count, char **merge_spec)
 void
 execute(const char *parent_name, int merge_spec_count, char **merge_spec)
 {
-   bson_t *bson;
-   bson = expand_spec(parent_name, merge_spec_count, merge_spec);
-   bson_destroy (bson);
+   const char *uristr = "mongodb://localhost/test";
+   const char *database_name;
+   mongoc_uri_t *uri;
+   mongoc_client_t *client;
+   mongoc_database_t *db;
+   const char *temp_name, *temp_one_name;
+   mongoc_collection_t *parent_coll, *temp_coll, *temp_one_coll;
+   bson_t *bson_spec, *all_accumulators, *one_accumulators, *one_projectors;
+   bson_iter_t iter_top, iter_spec, iter;
+   bson_error_t error;
+
+   printf("execute parent_name: %s\n", parent_name);
+   uristr = getenv ("MONGODB_URI");
+   uri = mongoc_uri_new (uristr);
+   client = mongoc_client_new (uristr);
+   database_name = mongoc_uri_get_database (uri);
+   db = mongoc_client_get_database(client, database_name);
+
+   temp_name = str_compose(parent_name, "_merge_temp");
+   temp_one_name = str_compose(parent_name, "_merge_temp");
+   parent_coll = mongoc_database_get_collection (db, parent_name);
+   temp_coll = mongoc_database_get_collection (db, temp_name);
+   temp_one_coll = mongoc_database_get_collection (db, temp_one_name);
+
+   all_accumulators = bson_new ();
+   one_accumulators = bson_new ();
+   one_projectors = bson_new ();
+
+   bson_spec = expand_spec(parent_name, merge_spec_count, merge_spec);
+   bson_iter_init_find (&iter_top, bson_spec, "merge_spec") || DIE;
+   BSON_ITER_HOLDS_ARRAY (&iter_top) || DIE;
+
+   // one
+   bson_iter_recurse (&iter_top, &iter_spec) || DIE;
+   while (bson_iter_next (&iter_spec)) {
+      const char *type, *parent_key, *child_name, *child_key, *dollar_parent_key;
+      BSON_ITER_HOLDS_ARRAY (&iter_spec) || DIE;
+      bson_iter_recurse (&iter_spec, &iter) || DIE;
+      type = bson_iter_next_utf8 (&iter, NULL);
+      if (strcmp ("one", type) != 0)
+         continue;
+      parent_key = bson_iter_next_utf8 (&iter, NULL);
+      child_name = bson_iter_next_utf8 (&iter, NULL);
+      child_key = bson_iter_next_utf8 (&iter, NULL);
+      printf ("info: spec: {type: \"%s\", parent_key: \"%s\", child_name: \"%s\", child_key: \"%s\"}\n",
+              type, parent_key, child_name, child_key);
+      dollar_parent_key = str_compose("$", parent_key);
+      BCON_APPEND(all_accumulators, parent_key, "{", "$max", dollar_parent_key, "}");
+      BCON_APPEND(one_accumulators, parent_key, "{", "$max", dollar_parent_key, "}");
+      BCON_APPEND(one_projectors, parent_key, dollar_parent_key);
+      bson_free ((void*)dollar_parent_key);
+   }
+
+   // many
+   bson_iter_recurse (&iter_top, &iter_spec) || DIE;
+   while (bson_iter_next (&iter_spec)) {
+      const char *type, *parent_key, *child_name, *child_key, *dollar_parent_key;
+      BSON_ITER_HOLDS_ARRAY (&iter_spec) || DIE;
+      bson_iter_recurse (&iter_spec, &iter) || DIE;
+      type = bson_iter_next_utf8 (&iter, NULL);
+      if (strcmp ("many", type) != 0)
+         continue;
+      parent_key = bson_iter_next_utf8 (&iter, NULL);
+      child_name = bson_iter_next_utf8 (&iter, NULL);
+      child_key = bson_iter_next_utf8 (&iter, NULL);
+      printf ("info: spec: {type: \"%s\", parent_key: \"%s\", child_name: \"%s\", child_key: \"%s\"}\n",
+              type, parent_key, child_name, child_key);
+      dollar_parent_key = str_compose("$", parent_key);
+      BCON_APPEND(all_accumulators, parent_key, "{", "$push", dollar_parent_key, "}");
+      bson_free ((void*)dollar_parent_key);
+   }
+   bson_destroy (bson_spec);
+
+   bson_printf ("all_accumulators: %s\n", all_accumulators);
+   bson_printf ("one_accumulators: %s\n", one_accumulators);
+   bson_printf ("one_projectors: %s\n", one_projectors);
+
+   bson_destroy (all_accumulators);
+   bson_destroy (one_accumulators);
+   bson_destroy (one_projectors);
+
+   mongoc_collection_drop (temp_coll, &error);
+   mongoc_collection_drop (temp_one_coll, &error);
+
+   mongoc_collection_destroy (parent_coll);
+   mongoc_collection_destroy (temp_coll);
+   mongoc_collection_destroy (temp_one_coll);
+
+   bson_free ((void*)temp_name);
+   bson_free ((void*)temp_one_name);
+
+   mongoc_database_destroy(db);
+   mongoc_client_destroy (client);
 }
 
 #ifdef MAIN
@@ -258,36 +367,18 @@ int
 main (int argc,
       char *argv[])
 {
-   const char *uristr = "mongodb://localhost/test";
-   const char *database_name;
-   mongoc_uri_t *uri;
-   mongoc_client_t *client;
-   mongoc_collection_t *collection;
-   mongoc_cursor_t *cursor;
-   const bson_t *doc;
-   bson_t *query;
-   char *str;
+   char **argvp;
+   char *parent_name;
 
+   if (argc < 3) {
+      DIE; // usage
+   }
    mongoc_init ();
 
-   uristr = getenv("MONGODB_URI");
-   uri = mongoc_uri_new (uristr);
-   client = mongoc_client_new (uristr);
-   database_name = mongoc_uri_get_database (uri);
-   collection = mongoc_client_get_collection (client, database_name, "test");
-   query = bson_new ();
-   cursor = mongoc_collection_find (collection, MONGOC_QUERY_NONE, 0, 0, 0, query, NULL, NULL);
+   argvp = argv;
+   parent_name = *argv++;
 
-   while (mongoc_cursor_next (cursor, &doc)) {
-      str = bson_as_json (doc, NULL);
-      printf ("%s\n", str);
-      bson_free (str);
-   }
-
-   bson_destroy (query);
-   mongoc_cursor_destroy (cursor);
-   mongoc_collection_destroy (collection);
-   mongoc_client_destroy (client);
+   execute(const char *parent_name, argc - 2, char **argvp);
 
    mongoc_cleanup ();
 
