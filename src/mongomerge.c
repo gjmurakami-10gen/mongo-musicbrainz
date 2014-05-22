@@ -81,7 +81,7 @@ void
 mongoc_cursor_dump (mongoc_cursor_t *cursor)
 {
    const bson_t *doc;
-   while (mongoc_cursor_next (cursor, &doc)) {
+   while (mongoc_cursor_more (cursor) && mongoc_cursor_next (cursor, &doc)) {
       const char *str;
       str = bson_as_json (doc, NULL);
       printf ("%s\n", str);
@@ -136,8 +136,8 @@ mongoc_cursor_insert (mongoc_cursor_t *cursor,
    bool ret = true;
    int64_t count = 0;
    const bson_t *doc;
-   while (ret && mongoc_cursor_next (cursor, &doc)) {
-      ret = mongoc_collection_insert (dest_coll, MONGOC_INSERT_NONE, doc, NULL, error);
+   while (ret && mongoc_cursor_more (cursor) && mongoc_cursor_next (cursor, &doc)) {
+      ret = mongoc_collection_insert (dest_coll, MONGOC_INSERT_NONE, doc, write_concern, error);
       ++count;
    }
    return ret ? count : -1;
@@ -158,10 +158,10 @@ mongoc_cursor_insert_batch (mongoc_cursor_t *cursor,
    for (i = 0; i < batch_size; i++)
        docs[i] = bson_new ();
    n_docs = 0;
-   while (ret && mongoc_cursor_next (cursor, &doc)) {
+   while (ret && mongoc_cursor_more (cursor) && mongoc_cursor_next (cursor, &doc)) {
       bson_copy_to (doc, docs[n_docs++]);
       if (n_docs == batch_size) {
-         ret = mongoc_collection_insert_bulk (dest_coll, MONGOC_INSERT_NONE, (const bson_t**)docs, n_docs, NULL, error);
+         ret = mongoc_collection_insert_bulk (dest_coll, MONGOC_INSERT_NONE, (const bson_t**)docs, n_docs, write_concern, error);
          for (i = 0; i < batch_size; i++)
             bson_reinit (docs[i]);
          count += n_docs;
@@ -169,7 +169,7 @@ mongoc_cursor_insert_batch (mongoc_cursor_t *cursor,
       }
    }
    if (ret && n_docs > 0) {
-      ret = mongoc_collection_insert_bulk (dest_coll, MONGOC_INSERT_NONE, (const bson_t**)docs, n_docs, NULL, error);
+      ret = mongoc_collection_insert_bulk (dest_coll, MONGOC_INSERT_NONE, (const bson_t**)docs, n_docs, write_concern, error);
       count += n_docs;
    }
    for (i = 0; i < batch_size; i++)

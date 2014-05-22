@@ -265,9 +265,10 @@ dtimeofday () {
    return tv.tv_sec + 0.000001 * tv.tv_usec;
 }
 
-static void
+int64_t
 collection_load_from_file (mongoc_collection_t *collection, const char *file_name)
 {
+   int64_t count = 0;
    bson_reader_t *reader;
    bson_t *doc;
    bool eof = false;
@@ -283,11 +284,11 @@ collection_load_from_file (mongoc_collection_t *collection, const char *file_nam
       doc = (bson_t*)bson_reader_read(reader, &eof);
       if (!doc || eof)
          break;
-      //bson_printf("collection_load_from_file: %s\n", b);
       mongoc_collection_insert (collection, MONGOC_INSERT_NONE, doc, NULL, &error) || WARN_ERROR;
+      ++count;
    }
-
    bson_reader_destroy(reader);
+   return count;
 }
 
 void test_merge (mongoc_database_t *db, mongoc_collection_t *collection)
@@ -321,16 +322,19 @@ void test_merge (mongoc_database_t *db, mongoc_collection_t *collection)
    bson_destroy (bson);
    execute ("people", sizeof(merge_one_spec)/sizeof(char*), (char**) merge_one_spec);
    execute ("owner", sizeof(merge_many_spec)/sizeof(char*), (char**) merge_many_spec);
-   collection_load_from_file (collection, "../twitter.bson");
+   int64_t count = collection_load_from_file (collection, "../twitter.bson");
+   printf("collection_load_from_file count: %lld\n", count);
+   bson_t query = BSON_INITIALIZER;
+   count = mongoc_collection_count (collection, MONGOC_QUERY_NONE, &query, 0, 0, NULL, &error);
+   printf("mongoc_collection_count count: %lld\n", count);
    mongoc_collection_t *temp_coll = mongoc_database_get_collection (db, "temp");
    mongoc_collection_drop (temp_coll, &error);
    double start_time = dtimeofday();
-   bson_t query = BSON_INITIALIZER;
    mongoc_cursor_t *cursor = mongoc_collection_find (collection, MONGOC_QUERY_NONE, 0, 0, 0, &query, NULL, NULL);
-   int64_t count = mongoc_cursor_insert (cursor, temp_coll, NULL, &error);
+   count = mongoc_cursor_insert (cursor, temp_coll, NULL, &error);
    double end_time = dtimeofday();
    double delta_time = end_time - start_time + 0.0000001;
-   printf("mongoc_cursor_insert: docs: %lld, %.2f docs/sec\n", count, count/delta_time);
+   printf("mongoc_cursor_insert: secs: %.2f, count: %lld, %.2f docs/sec\n", delta_time, count, count/delta_time);
 }
 
 int
