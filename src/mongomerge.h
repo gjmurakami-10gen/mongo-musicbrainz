@@ -43,7 +43,7 @@ bson_t *
 bson_new_from_iter_array (bson_iter_t *iter) BSON_GNUC_WARN_UNUSED_RESULT;
 
 void
-bson_printf (const char *format, bson_t *b);
+bson_printf (const char *format, const bson_t *b);
 
 void
 mongoc_cursor_dump (mongoc_cursor_t *cursor);
@@ -60,6 +60,25 @@ mongoc_collection_aggregate_pipeline  (mongoc_collection_t       *collection,
                                        const bson_t              *pipeline,
                                        const bson_t              *options,
                                        const mongoc_read_prefs_t *read_prefs) BSON_GNUC_WARN_UNUSED_RESULT;
+
+
+int64_t
+mongoc_cursor_insert (mongoc_cursor_t *cursor,
+                      mongoc_collection_t *dest_coll,
+                      const mongoc_write_concern_t *write_concern,
+                      bson_error_t *error);
+
+int64_t
+mongoc_cursor_insert_batch (mongoc_cursor_t *cursor,
+                           mongoc_collection_t *dest_coll,
+                           const mongoc_write_concern_t *write_concern,
+                           bson_error_t *error, size_t batch_size) BSON_GNUC_DEPRECATED_FOR (mongoc_cursor_insert_batch);
+
+int64_t
+mongoc_cursor_bulk_insert (mongoc_cursor_t *cursor,
+                           mongoc_collection_t *dest_coll,
+                           const mongoc_write_concern_t *write_concern,
+                           bson_error_t *error);
 
 bson_t *
 child_by_merge_key(const char *parent_key, const char *child_name, const char *child_key);
