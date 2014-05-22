@@ -127,6 +127,22 @@ mongoc_collection_aggregate_pipeline (mongoc_collection_t       *collection, /* 
    return cursor;
 }
 
+void
+agg_copy(mongoc_collection_t *source_coll, mongoc_collection_t *dest_coll, bson_t *pipeline)
+{
+   bson_t *options = BCON_NEW("cursor", "{", "}", "allowDiskUse", BCON_BOOL(1));
+   /*
+   mongoc_cursor_t *cursor = mongoc_collection_aggregate_pipeline(source_coll, MONGOC_QUERY_NONE, pipeline, options, NULL);
+   const bson_t *doc;
+   while (mongoc_cursor_next (cursor, &doc)) {
+      bson_error_t error;
+      mongoc_collection_insert (dest_coll, MONGOC_INSERT_NONE, &doc, NULL, &error) || WARN_ERROR;
+   }
+   mongoc_cursor_destroy (cursor);
+   */
+   bson_destroy (options);
+}
+
 bson_t *
 child_by_merge_key(const char *parent_key, const char *child_name, const char *child_key)
 {
@@ -214,6 +230,18 @@ copy_many_with_parent_id(const char *parent_key, const char *child_name, const c
    return bson;
 }
 
+void
+group_and_update(mongoc_collection_t *source_coll, mongoc_collection_t *dest_coll, bson_t *accumulators)
+{
+   bson_t *options = BCON_NEW("cursor", "{", "}", "allowDiskUse", BCON_BOOL(1));
+   /*
+   mongoc_cursor_t *cursor = mongoc_collection_aggregate_pipeline(source_coll, MONGOC_QUERY_NONE, pipeline, options, NULL);
+   // pending
+   mongoc_cursor_destroy (cursor);
+   */
+   bson_destroy (options);
+}
+
 bson_t *
 expand_spec(const char *parent_name, int merge_spec_count, char **merge_spec)
 {
@@ -273,8 +301,8 @@ execute(const char *parent_name, int merge_spec_count, char **merge_spec)
    mongoc_client_t *client;
    mongoc_database_t *db;
    const char *temp_name, *temp_one_name;
-   mongoc_collection_t *parent_coll, *temp_coll, *temp_one_coll;
-   bson_t *bson_spec, *all_accumulators, *one_accumulators, *one_projectors;
+   mongoc_collection_t *parent_coll, *child_coll, *temp_coll, *temp_one_coll;
+   bson_t *bson_spec, *all_accumulators, *one_accumulators, *one_projectors, *pipeline;
    bson_iter_t iter_top, iter_spec, iter;
    bson_error_t error;
 
@@ -290,6 +318,8 @@ execute(const char *parent_name, int merge_spec_count, char **merge_spec)
    parent_coll = mongoc_database_get_collection (db, parent_name);
    temp_coll = mongoc_database_get_collection (db, temp_name);
    temp_one_coll = mongoc_database_get_collection (db, temp_one_name);
+   bson_free ((void*)temp_name);
+   bson_free ((void*)temp_one_name);
 
    all_accumulators = bson_new ();
    one_accumulators = bson_new ();
@@ -313,12 +343,29 @@ execute(const char *parent_name, int merge_spec_count, char **merge_spec)
       child_key = bson_iter_next_utf8 (&iter, NULL);
       printf ("info: spec: {type: \"%s\", parent_key: \"%s\", child_name: \"%s\", child_key: \"%s\"}\n",
               type, parent_key, child_name, child_key);
+      child_coll = mongoc_database_get_collection (db, child_name);
+      pipeline = child_by_merge_key(parent_key, child_name, child_key);
+      agg_copy(child_coll, temp_one_coll, pipeline);
+      bson_destroy (pipeline);
+      pipeline = parent_child_merge_key(parent_key, child_name, child_key);
+      agg_copy(parent_coll, temp_one_coll, pipeline);
+      bson_destroy (pipeline);
+      mongoc_collection_destroy (child_coll);
       dollar_parent_key = str_compose("$", parent_key);
       BCON_APPEND(all_accumulators, parent_key, "{", "$max", dollar_parent_key, "}");
       BCON_APPEND(one_accumulators, parent_key, "{", "$max", dollar_parent_key, "}");
       BCON_APPEND(one_projectors, parent_key, dollar_parent_key);
       bson_free ((void*)dollar_parent_key);
    }
+   bson_printf ("one_accumulators: %s\n", one_accumulators);
+   bson_printf ("one_projectors: %s\n", one_projectors);
+   pipeline = merge_one_all(one_accumulators, one_projectors);
+   agg_copy(temp_one_coll, temp_coll, pipeline);
+   bson_destroy (pipeline);
+   bson_destroy (one_accumulators);
+   bson_destroy (one_projectors);
+   mongoc_collection_drop (temp_one_coll, &error);
+   mongoc_collection_drop (temp_one_coll, &error);
 
    // many
    bson_iter_recurse (&iter_top, &iter_spec) || DIE;
@@ -334,6 +381,11 @@ execute(const char *parent_name, int merge_spec_count, char **merge_spec)
       child_key = bson_iter_next_utf8 (&iter, NULL);
       printf ("info: spec: {type: \"%s\", parent_key: \"%s\", child_name: \"%s\", child_key: \"%s\"}\n",
               type, parent_key, child_name, child_key);
+      child_coll = mongoc_database_get_collection (db, child_name);
+      pipeline = copy_many_with_parent_id(parent_key, child_name, child_key);
+      agg_copy(child_coll, temp_coll, pipeline);
+      bson_destroy (pipeline);
+      mongoc_collection_destroy (child_coll);
       dollar_parent_key = str_compose("$", parent_key);
       BCON_APPEND(all_accumulators, parent_key, "{", "$push", dollar_parent_key, "}");
       bson_free ((void*)dollar_parent_key);
@@ -341,23 +393,12 @@ execute(const char *parent_name, int merge_spec_count, char **merge_spec)
    bson_destroy (bson_spec);
 
    bson_printf ("all_accumulators: %s\n", all_accumulators);
-   bson_printf ("one_accumulators: %s\n", one_accumulators);
-   bson_printf ("one_projectors: %s\n", one_projectors);
-
+   group_and_update(temp_coll, parent_coll, all_accumulators);
    bson_destroy (all_accumulators);
-   bson_destroy (one_accumulators);
-   bson_destroy (one_projectors);
-
    mongoc_collection_drop (temp_coll, &error);
-   mongoc_collection_drop (temp_one_coll, &error);
+   mongoc_collection_destroy (temp_coll);
 
    mongoc_collection_destroy (parent_coll);
-   mongoc_collection_destroy (temp_coll);
-   mongoc_collection_destroy (temp_one_coll);
-
-   bson_free ((void*)temp_name);
-   bson_free ((void*)temp_one_name);
-
    mongoc_database_destroy(db);
    mongoc_client_destroy (client);
 }
