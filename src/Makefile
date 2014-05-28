@@ -1,6 +1,6 @@
 CMDS = mongomerge
 
-TESTS = test-mongomerge
+TESTS = test-cursor test-mongomerge
 
 all: $(CMDS) $(TESTS)
 
@@ -14,11 +14,14 @@ LIBS = $(shell pkg-config --libs libmongoc-1.0)
 mongomerge: mongomerge.h mongomerge.c
 	$(CC) -o $@ $(WARNINGS) $(DEBUG) $(OPTIMIZE) $(CFLAGS) $(LIBS) -DMAIN mongomerge.c
 
+test-cursor: test-cursor.c
+	$(CC) -o $@ $(WARNINGS) $(DEBUG) $(OPTIMIZE) $(CFLAGS) $(LIBS) test-cursor.c
+
 test-mongomerge: mongomerge.h mongomerge.c test-mongomerge.c
 	$(CC) -o $@ $(WARNINGS) $(DEBUG) $(OPTIMIZE) $(CFLAGS) $(LIBS) mongomerge.c test-mongomerge.c
 
 clean:
 	rm -fr $(CMDS) $(TESTS) *.dSYM
 
-test: test-mongomerge
-	MONGODB_URI='mongodb://localhost/test' $$VALGRIND ./test-mongomerge
+test: $(TESTS)
+	MONGODB_URI='mongodb://localhost/test' $$VALGRIND ./test-cursor
