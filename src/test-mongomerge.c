@@ -21,9 +21,9 @@
 
 #include <mongoc.h>
 #include <stdio.h>
+#include <math.h>
 #include <bcon.h>
 #include "mongomerge.h"
-
 
 #define assert_cmpstr(a, b)                                             \
    do {                                                                 \
@@ -43,70 +43,6 @@
          abort();                                                       \
       }                                                                 \
    } while (0)
-
-
-#ifdef BSON_OS_WIN32
-#include <stdarg.h>
-#include <share.h>
-static __inline int
-bson_open (const char *filename,
-           int flags,
-           ...)
-{
-   int fd = -1;
-   int mode = 0;
-
-   if (_sopen_s (&fd, filename, flags|_O_BINARY, _SH_DENYNO, _S_IREAD | _S_IWRITE) == NO_ERROR) {
-      return fd;
-   }
-
-   return -1;
-}
-# define bson_close _close
-# define bson_read(f,b,c) ((ssize_t)_read((f), (b), (int)(c)))
-# define bson_write _write
-#else
-# define bson_open open
-# define bson_read read
-# define bson_close close
-# define bson_write write
-#endif
-
-void load_test_single(mongoc_collection_t *collection)
-{
-   bson_error_t error;
-   bson_t *doc;
-
-   mongoc_collection_drop (collection, &error);
-
-   doc = BCON_NEW ("hello", BCON_UTF8 ("world"),
-                   "count_down", "[", BCON_INT32(3), BCON_INT32(2), BCON_INT32(1), "]",
-                   "goodbye", "{", "exit_code", BCON_INT32(0), "}");
-   mongoc_collection_insert (collection, MONGOC_INSERT_NONE, doc, NULL, &error) || WARN_ERROR;
-   bson_destroy (doc);
-
-   mongoc_collection_dump (collection);
-}
-
-void load_test_bulk(mongoc_collection_t *collection)
-{
-   bson_error_t error;
-   uint32_t n_docs, i;
-   bson_t *docs[4];
-
-   mongoc_collection_drop (collection, &error);
-
-   n_docs = 0;
-   docs[n_docs++] = BCON_NEW ("_id", BCON_INT32 (11), "name", BCON_UTF8 ("Joe"));
-   docs[n_docs++] = BCON_NEW ("_id", BCON_INT32 (22), "name", BCON_UTF8 ("Jane"));
-   docs[n_docs++] = BCON_NEW ("_id", BCON_INT32 (33), "name", BCON_UTF8 ("Jack"));
-   docs[n_docs++] = BCON_NEW ("_id", BCON_INT32 (44), "name", BCON_UTF8 ("Other"));
-   mongoc_collection_insert_bulk (collection, MONGOC_INSERT_NONE, (const bson_t**)docs, n_docs, NULL, &error) || WARN_ERROR;
-   for (i = 0; i < n_docs; i++)
-        bson_destroy (docs[i]);
-
-   mongoc_collection_dump (collection);
-}
 
 const char *one_to_one_fixture = "\
 {\
@@ -187,6 +123,16 @@ const char *one_to_many_fixture = "\
     }\
 }";
 
+const char *merge_one_spec[] = {
+   "gender",
+   "alias"
+};
+
+const char *merge_many_spec[] = {
+   "pet:[]",
+   "alias:[]"
+};
+
 void load_fixture (mongoc_database_t *db, const char *fixture, const char *key)
 {
    mongoc_collection_t *collection;
@@ -218,46 +164,6 @@ void load_fixture (mongoc_database_t *db, const char *fixture, const char *key)
    bson_destroy (&bson_fixture);
 }
 
-void test_pipeline (mongoc_collection_t *collection)
-{
-   bson_t *pipeline;
-   mongoc_cursor_t *cursor;
-
-   pipeline = BCON_NEW (
-      "pipeline", "[",
-         "{", "$match", "{", "name", "Jack", "}", "}",
-      "]"
-   );
-   bson_printf ("test_pipeline: %s\n", pipeline);
-   cursor = mongoc_collection_aggregate_pipeline(collection, MONGOC_QUERY_NONE, pipeline, NULL, NULL);
-   assert (cursor);
-   mongoc_cursor_dump (cursor);
-   mongoc_cursor_destroy (cursor);
-   bson_destroy (pipeline);
-}
-
-const char *merge_one_spec[] = {
-   "gender",
-   "alias"
-};
-
-const char *merge_many_spec[] = {
-   "pet:[]",
-   "alias:[]"
-};
-
-static ssize_t
-test_reader_from_handle_read(void * handle, void * buf, size_t len)
-{
-   return bson_read(*(int *)handle, buf, len);
-}
-
-static void
-test_reader_from_handle_destroy(void * handle)
-{
-   bson_close(*(int *)handle);
-}
-
 double
 dtimeofday () {
    struct timeval tv;
@@ -265,38 +171,10 @@ dtimeofday () {
    return tv.tv_sec + 0.000001 * tv.tv_usec;
 }
 
-int64_t
-collection_load_from_file (mongoc_collection_t *collection, const char *file_name)
-{
-   int64_t count = 0;
-   bson_reader_t *reader;
-   bson_t *doc;
-   bool eof = false;
-   int fd;
-   bson_error_t error;
-
-   fd  = bson_open(file_name, O_RDONLY);
-   assert(-1 != fd);
-
-   reader = bson_reader_new_from_handle ((void *)&fd, &test_reader_from_handle_read, &test_reader_from_handle_destroy);
-   mongoc_collection_drop (collection, &error);
-   while (1) {
-      doc = (bson_t*)bson_reader_read(reader, &eof);
-      if (!doc || eof)
-         break;
-      mongoc_collection_insert (collection, MONGOC_INSERT_NONE, doc, NULL, &error) || WARN_ERROR;
-      ++count;
-   }
-   bson_reader_destroy(reader);
-   return count;
-}
-
 void test_merge (mongoc_database_t *db, mongoc_collection_t *collection)
 {
-   bson_error_t error;
-   load_test_single (collection);
-   load_test_bulk (collection);
    load_fixture (db, one_to_one_fixture, "before");
+   /*
    load_fixture (db, one_to_many_fixture, "before");
    test_pipeline (collection);
    bson_t *bson = child_by_merge_key("parent", "child", "key");
@@ -322,26 +200,21 @@ void test_merge (mongoc_database_t *db, mongoc_collection_t *collection)
    bson_destroy (bson);
    execute ("people", sizeof(merge_one_spec)/sizeof(char*), (char**) merge_one_spec);
    execute ("owner", sizeof(merge_many_spec)/sizeof(char*), (char**) merge_many_spec);
-   int64_t count = collection_load_from_file (collection, "../twitter.bson");
-   printf("collection_load_from_file count: %lld\n", count);
-   bson_t query = BSON_INITIALIZER;
-   count = mongoc_collection_count (collection, MONGOC_QUERY_NONE, &query, 0, 0, NULL, &error);
-   printf("mongoc_collection_count count: %lld\n", count);
-   mongoc_collection_t *temp_coll = mongoc_database_get_collection (db, "temp");
-   mongoc_collection_drop (temp_coll, &error);
+   */
    double start_time = dtimeofday();
-   mongoc_cursor_t *cursor = mongoc_collection_find (collection, MONGOC_QUERY_NONE, 0, 0, 0, &query, NULL, NULL);
-   count = mongoc_cursor_insert (cursor, temp_coll, NULL, &error);
+   load_fixture (db, one_to_many_fixture, "before");
+   int64_t count = execute ("people", sizeof(merge_one_spec)/sizeof(char*), (char**) merge_one_spec);
    double end_time = dtimeofday();
    double delta_time = end_time - start_time + 0.0000001;
-   printf("mongoc_cursor_insert: secs: %.2f, count: %lld, %.2f docs/sec\n", delta_time, count, count/delta_time);
+   printf("mongoc_cursor_insert: secs: %.2f, count: %lld, %lld docs/sec\n", delta_time, count, llround(count/delta_time));
 }
 
 int
 main (int argc,
       char *argv[])
 {
-   const char *uristr = "mongodb://localhost/test";
+   const char *default_uristr = "mongodb://localhost/test";
+   char *uristr;
    const char *database_name;
    const char *collection_name;
    mongoc_uri_t *uri;
@@ -352,8 +225,9 @@ main (int argc,
    mongoc_init ();
 
    uristr = getenv ("MONGODB_URI");
+   uristr = uristr ? uristr : (char*)default_uristr;
    uri = mongoc_uri_new (uristr);
-   client = mongoc_client_new (uristr);
+   client = mongoc_client_new_from_uri (uri);
    database_name = mongoc_uri_get_database (uri);
    db = mongoc_client_get_database(client, database_name);
    collection_name = "test";

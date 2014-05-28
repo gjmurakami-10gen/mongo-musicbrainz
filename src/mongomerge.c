@@ -105,7 +105,7 @@ mongoc_collection_remove_all (mongoc_collection_t *collection)
    bson_t bson = BSON_INITIALIZER;
    bool r;
    bson_error_t error;
-   (r = mongoc_collection_delete (collection, MONGOC_DELETE_NONE, &bson, NULL, &error)) || WARN_ERROR;
+   (r = mongoc_collection_remove (collection, MONGOC_REMOVE_NONE, &bson, NULL, &error)) || WARN_ERROR;
    return (r);
 }
 
@@ -194,7 +194,7 @@ agg_copy(mongoc_collection_t *source_coll, mongoc_collection_t *dest_coll, bson_
 {
    bson_error_t error;
    bson_t *options = BCON_NEW("cursor", "{", "}", "allowDiskUse", BCON_BOOL(1));
-   mongoc_cursor_t *cursor = mongoc_collection_aggregate_pipeline(source_coll, MONGOC_QUERY_NONE, pipeline, options, NULL);
+   mongoc_cursor_t *cursor = mongoc_collection_aggregate (source_coll, MONGOC_QUERY_NONE, pipeline, options, NULL);
    mongoc_cursor_insert (cursor, dest_coll, NULL, &error) || WARN_ERROR;
    mongoc_cursor_destroy (cursor);
    bson_destroy (options);
@@ -292,7 +292,7 @@ group_and_update(mongoc_collection_t *source_coll, mongoc_collection_t *dest_col
 {
    bson_t *options = BCON_NEW("cursor", "{", "}", "allowDiskUse", BCON_BOOL(1));
    bson_t *pipeline = BCON_NEW("pipeline", "[", "{", "$group", "{", "_id", "$parent_id", BCON(accumulators), "}", "}", "]");
-   mongoc_cursor_t *cursor = mongoc_collection_aggregate_pipeline(source_coll, MONGOC_QUERY_NONE, pipeline, options, NULL);
+   mongoc_cursor_t *cursor = mongoc_collection_aggregate (source_coll, MONGOC_QUERY_NONE, pipeline, options, NULL);
    // pending
    mongoc_cursor_destroy (cursor);
    bson_destroy (options);
@@ -348,9 +348,10 @@ expand_spec(const char *parent_name, int merge_spec_count, char **merge_spec)
    return bson;
 }
 
-void
+int64_t
 execute(const char *parent_name, int merge_spec_count, char **merge_spec)
 {
+   int64_t count = 0;
    const char *uristr = "mongodb://localhost/test";
    const char *database_name;
    mongoc_uri_t *uri;
@@ -457,28 +458,6 @@ execute(const char *parent_name, int merge_spec_count, char **merge_spec)
    mongoc_collection_destroy (parent_coll);
    mongoc_database_destroy(db);
    mongoc_client_destroy (client);
+
+   return count;
 }
-
-#ifdef MAIN
-int
-main (int argc,
-      char *argv[])
-{
-   char **argvp;
-   char *parent_name;
-
-   if (argc < 3) {
-      DIE; // usage
-   }
-   mongoc_init ();
-
-   argvp = argv;
-   parent_name = *argv++;
-
-   execute(parent_name, argc - 2, argvp);
-
-   mongoc_cleanup ();
-
-   return 0;
-}
-#endif

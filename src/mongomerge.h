@@ -95,7 +95,7 @@ copy_many_with_parent_id(const char *parent_key, const char *child_name, const c
 bson_t *
 expand_spec(const char *parent_name, int merge_spec_count, char **merge_spec);
 
-void
+int64_t
 execute(const char *parent_name, int merge_spec_count, char **merge_spec);
 
 #endif
