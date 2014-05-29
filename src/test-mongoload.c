@@ -89,19 +89,18 @@ collection_load_from_file_insert_single (mongoc_collection_t *collection, const 
          mongoc_collection_insert (collection, MONGOC_INSERT_NONE, doc, NULL, &error) || WARN_ERROR;
       ++count;
    }
-   //bson_reader_destroy(reader);
+   bson_reader_destroy(reader);
    return count;
 }
 
 int64_t
-collection_load_from_file_insert_batch (mongoc_collection_t *collection, const char *file_name, size_t batch_size)
+collection_load_from_file_insert_docs (mongoc_collection_t *collection, const char *file_name, size_t batch_size)
 {
    bool ret = true;
    int64_t count = 0;
    size_t i, n_docs;
 
-   bson_t **docs;
-   docs = bson_malloc(batch_size * sizeof(bson_t*));
+   bson_t **docs = bson_malloc(batch_size * sizeof(bson_t*));
    for (i = 0; i < batch_size; i++)
        docs[i] = bson_new ();
    int fd = bson_open(file_name, O_RDONLY);
@@ -126,9 +125,47 @@ collection_load_from_file_insert_batch (mongoc_collection_t *collection, const c
       ret = mongoc_collection_insert_bulk (collection, MONGOC_INSERT_NONE, (const bson_t**)docs, n_docs, NULL, &error);
       count += n_docs;
    }
+   bson_reader_destroy (reader);
    for (i = 0; i < batch_size; i++)
       bson_destroy (docs[i]);
    bson_free (docs);
+   return ret ? count : -1;
+}
+
+int64_t
+collection_load_from_file_bulk_insert (mongoc_collection_t *collection, const char *file_name, size_t batch_size)
+{
+   bool ret = true;
+   int64_t count = 0;
+   bson_t reply;
+   int fd = bson_open(file_name, O_RDONLY);
+   assert(-1 != fd);
+   bson_reader_t *reader = bson_reader_new_from_handle ((void *)&fd, &test_reader_from_handle_read, &test_reader_from_handle_destroy);
+   bson_error_t error;
+   mongoc_collection_drop (collection, &error);
+   const bson_t *doc;
+   bool eof = false;
+   size_t n_docs = 0;
+   mongoc_bulk_operation_t *bulk = mongoc_collection_create_bulk_operation (collection, true, NULL);
+   while (ret && (doc = (bson_t*)bson_reader_read (reader, &eof))) {
+      mongoc_bulk_operation_insert (bulk, doc);
+      if (++n_docs == batch_size) {
+         ret = mongoc_bulk_operation_execute (bulk, &reply, &error);
+         count += n_docs;
+         n_docs = 0;
+         mongoc_bulk_operation_destroy (bulk);
+         bulk = mongoc_collection_create_bulk_operation (collection, true, NULL);
+      }
+   }
+   if (ret && n_docs > 0) {
+      ret = mongoc_bulk_operation_execute (bulk, &reply, &error);
+      count += n_docs;
+   }
+   if (!ret) {
+      printf ("Error: %s\n", error.message);
+   }
+   mongoc_bulk_operation_destroy (bulk);
+   bson_reader_destroy (reader);
    return ret ? count : -1;
 }
 
@@ -138,7 +175,8 @@ void execute (mongoc_database_t *db, mongoc_collection_t *collection)
    // measurements for Mac Pro Mid 2010, 2 x 2.66 GHz 6-Core Intel Xeon, MacPro5,1, SSD
    //int64_t count = collection_load_from_file_insert_single (collection, "../twitter.bson", false); // secs: 0.03, count: 51428, 1515978 docs/sec
    //int64_t count = collection_load_from_file_insert_single (collection, "../twitter.bson", true); // secs: 9.52, count: 51428, 5404 docs/sec
-   int64_t count = collection_load_from_file_insert_batch (collection, "../twitter.bson", 1000); // secs: 2.09, count: 51428, 24607 docs/sec
+   //int64_t count = collection_load_from_file_insert_docs (collection, "../twitter.bson", 1000); // secs: 2.09, count: 51428, 24607 docs/sec
+   int64_t count = collection_load_from_file_bulk_insert (collection, "../twitter.bson", 1000); // mongoc_client_default_stream_initiator
    double end_time = dtimeofday();
    double delta_time = end_time - start_time + 0.0000001;
    printf("secs: %.2f, count: %lld, %lld docs/sec\n", delta_time, count, llround(count/delta_time));
