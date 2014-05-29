@@ -238,6 +238,7 @@ main (int argc,
    mongoc_collection_destroy (collection);
    mongoc_database_destroy(db);
    mongoc_client_destroy (client);
+   mongoc_uri_destroy (uri);
 
    mongoc_cleanup ();
 

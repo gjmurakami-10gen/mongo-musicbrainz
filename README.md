@@ -19,3 +19,9 @@ rake
 ```
 
 The output of rake outlines the ordered steps for the project.
+
+# Writeup and Discussion
+
+"Big Data Aggregation" writeup, notes, and discussion can be found in the
+[wiki](https://github.com/gjmurakami-10gen/mongo-musicbrainz/wiki).
+

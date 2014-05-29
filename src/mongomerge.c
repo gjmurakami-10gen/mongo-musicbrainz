@@ -458,6 +458,7 @@ execute(const char *parent_name, int merge_spec_count, char **merge_spec)
    mongoc_collection_destroy (parent_coll);
    mongoc_database_destroy(db);
    mongoc_client_destroy (client);
+   mongoc_uri_destroy (uri);
 
    return count;
 }
