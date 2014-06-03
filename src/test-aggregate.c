@@ -56,12 +56,26 @@ void test_suite (mongoc_database_t *db, mongoc_collection_t *collection)
    bson_t query = BSON_INITIALIZER;
    int64_t count = mongoc_collection_count (collection, MONGOC_QUERY_NONE, &query, 0, 0, NULL, &error);
    printf("mongoc_collection_count count: %lld\n", count);
+   bson_t *options = BCON_NEW("cursor", "{", "}", "allowDiskUse", BCON_BOOL(1));
+   bson_t *pipeline = BCON_NEW (
+      "pipeline", "[",
+          "{",
+             "$match", "{",
+             "}",
+          "}",
+          "{",
+             "$project", "{",
+                "text", BCON_INT32(1),
+             "}",
+          "}",
+       "]"
+   );
    double start_time = dtimeofday();
-   mongoc_cursor_t *cursor = mongoc_collection_find (collection, MONGOC_QUERY_NONE, 0, 0, 0, &query, NULL, NULL);
+   mongoc_cursor_t *cursor = mongoc_collection_aggregate (collection, MONGOC_QUERY_NONE, pipeline, options, NULL);
    count = mongoc_cursor_dump (cursor);
    double end_time = dtimeofday();
    double delta_time = end_time - start_time + 0.0000001;
-   printf("mongoc_cursor_insert: secs: %.2f, count: %lld, %.2f docs/sec\n", delta_time, count, count/delta_time);
+   printf("mongoc_cursor_dump: secs: %.2f, count: %lld, %.2f docs/sec\n", delta_time, count, count/delta_time);
 }
 
 int

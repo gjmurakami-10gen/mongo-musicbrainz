@@ -1,5 +1,5 @@
 CMDS = mongomerge
-TESTS = test-cursor test-mongoload test-mongomerge
+TESTS = test-aggregate test-cursor test-mongoload test-mongomerge
 
 WARNINGS = -Wall -Wno-deprecated-declarations
 DEBUG = -ggdb
@@ -11,18 +11,20 @@ LIBS = $(shell pkg-config --libs libmongoc-1.0)
 default: test
 
 test: all
-	MONGODB_URI='mongodb://localhost/test' $$VALGRIND ./test-mongoload
+	MONGODB_URI='mongodb://localhost/test' $$VALGRIND ./test-mongomerge
 
 all: $(CMDS) $(TESTS)
-
-
-test-mongoload: test-mongoload.c
-	$(CC) -o $@ $(WARNINGS) $(DEBUG) $(OPTIMIZE) $(CFLAGS) $^ $(LIBS)
 
 mongomerge: mongomerge.o mongomerge_main.o
 	$(CC) -o $@ $(WARNINGS) $(DEBUG) $(OPTIMIZE) $(CFLAGS) $^ $(LIBS)
 
-test-cursor: test-cursor.o
+test-aggregate: test-aggregate.c
+	$(CC) -o $@ $(WARNINGS) $(DEBUG) $(OPTIMIZE) $(CFLAGS) $^ $(LIBS)
+
+test-cursor: test-cursor.c
+	$(CC) -o $@ $(WARNINGS) $(DEBUG) $(OPTIMIZE) $(CFLAGS) $^ $(LIBS)
+
+test-mongoload: test-mongoload.c
 	$(CC) -o $@ $(WARNINGS) $(DEBUG) $(OPTIMIZE) $(CFLAGS) $^ $(LIBS)
 
 test-mongomerge: mongomerge.o test-mongomerge.o

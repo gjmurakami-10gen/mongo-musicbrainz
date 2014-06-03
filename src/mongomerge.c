@@ -81,7 +81,7 @@ void
 mongoc_cursor_dump (mongoc_cursor_t *cursor)
 {
    const bson_t *doc;
-   while (mongoc_cursor_more (cursor) && mongoc_cursor_next (cursor, &doc)) {
+   while (mongoc_cursor_next (cursor, &doc)) {
       const char *str;
       str = bson_as_json (doc, NULL);
       printf ("%s\n", str);
@@ -136,9 +136,12 @@ mongoc_cursor_insert (mongoc_cursor_t *cursor,
    bool ret = true;
    int64_t count = 0;
    const bson_t *doc;
-   while (ret && mongoc_cursor_more (cursor) && mongoc_cursor_next (cursor, &doc)) {
+   while (ret && mongoc_cursor_next (cursor, &doc)) {
       ret = mongoc_collection_insert (dest_coll, MONGOC_INSERT_NONE, doc, write_concern, error);
       ++count;
+   }
+   if (mongoc_cursor_error (cursor, error)) {
+      fprintf (stderr, "mongoc_cursor_insert failure: %s\n", error->message);
    }
    return ret ? count : -1;
 }
@@ -147,7 +150,8 @@ int64_t
 mongoc_cursor_insert_batch (mongoc_cursor_t *cursor,
                            mongoc_collection_t *dest_coll,
                            const mongoc_write_concern_t *write_concern,
-                           bson_error_t *error, size_t batch_size)
+                           bson_error_t *error,
+                           size_t batch_size)
 {
    bool ret = true;
    int64_t count = 0;
@@ -158,7 +162,7 @@ mongoc_cursor_insert_batch (mongoc_cursor_t *cursor,
    for (i = 0; i < batch_size; i++)
        docs[i] = bson_new ();
    n_docs = 0;
-   while (ret && mongoc_cursor_more (cursor) && mongoc_cursor_next (cursor, &doc)) {
+   while (ret && mongoc_cursor_next (cursor, &doc)) {
       bson_copy_to (doc, docs[n_docs++]);
       if (n_docs == batch_size) {
          ret = mongoc_collection_insert_bulk (dest_coll, MONGOC_INSERT_NONE, (const bson_t**)docs, n_docs, write_concern, error);
@@ -189,17 +193,6 @@ mongoc_cursor_bulk_insert (mongoc_cursor_t *cursor,
    return ret;
 }
 
-void
-agg_copy(mongoc_collection_t *source_coll, mongoc_collection_t *dest_coll, bson_t *pipeline)
-{
-   bson_error_t error;
-   bson_t *options = BCON_NEW("cursor", "{", "}", "allowDiskUse", BCON_BOOL(1));
-   mongoc_cursor_t *cursor = mongoc_collection_aggregate (source_coll, MONGOC_QUERY_NONE, pipeline, options, NULL);
-   mongoc_cursor_insert (cursor, dest_coll, NULL, &error) || WARN_ERROR;
-   mongoc_cursor_destroy (cursor);
-   bson_destroy (options);
-}
-
 bson_t *
 child_by_merge_key(const char *parent_key, const char *child_name, const char *child_key)
 {
@@ -225,22 +218,24 @@ bson_t *
 parent_child_merge_key(const char *parent_key, const char *child_name, const char *child_key)
 {
    bson_t *bson;
-   size_t parent_key_dot_child_key_size = strlen("$") + strlen(parent_key) + strlen(".") + strlen(child_key) + 1;
-   char *parent_key_dot_child_key = bson_malloc (parent_key_dot_child_key_size);
-   bson_snprintf (parent_key_dot_child_key, parent_key_dot_child_key_size, "$%s.%s", parent_key, child_key);
+   size_t dollar_parent_key_dot_child_key_size = strlen("$") + strlen(parent_key) + strlen(".") + strlen(child_key) + 1;
+   char *dollar_parent_key_dot_child_key = bson_malloc (dollar_parent_key_dot_child_key_size);
+   bson_snprintf (dollar_parent_key_dot_child_key, dollar_parent_key_dot_child_key_size, "$%s.%s", parent_key, child_key);
+   const char *dollar_parent_key = str_compose ("$", parent_key);
    bson = BCON_NEW (
       "pipeline", "[",
          "{",
             "$project", "{",
               "_id", BCON_INT32(0),
               "child_name", "{", "$literal", child_name, "}",
-              "merge_id", "{", "$ifNull", "[", parent_key_dot_child_key, parent_key, "]", "}",
+              "merge_id", "{", "$ifNull", "[", dollar_parent_key_dot_child_key, dollar_parent_key, "]", "}",
               "parent_id", "$_id",
             "}",
          "}",
       "]"
    );
-   bson_free (parent_key_dot_child_key);
+   bson_free (dollar_parent_key_dot_child_key);
+   bson_free ((char*)dollar_parent_key);
    return bson;
 }
 
@@ -255,16 +250,19 @@ merge_one_all(bson_t *accumulators, bson_t *projectors)
                     "child_name", "$child_name",
                     "merge_id", "$merge_id", "}",
                  "parent_id", "{",
-                    "$push", "$parent_id", BCON(accumulators), "}", "}",
-          "}",
-          "{", "$unwind", "$parent_id", "}",
-          "{", "$group", "{",
-                  "_id", "$parent_id", BCON(accumulators), "}",
-          "}",
-          "{", "$project", "{",
+                    "$push", "$parent_id", "}",
+                    BCON(accumulators), "}",
+         "}",
+         "{", "$unwind", "$parent_id", "}",
+         "{", "$group", "{",
+                  "_id", "$parent_id",
+                  BCON(accumulators), "}",
+         "}",
+         "{", "$project", "{",
                   "_id", BCON_INT32(0),
-                  "parent_id", "$_id", BCON(projectors), "}",
-          "}",
+                  "parent_id", "$_id",
+                  BCON(projectors), "}",
+         "}",
       "]"
    );
    return bson;
@@ -287,15 +285,75 @@ copy_many_with_parent_id(const char *parent_key, const char *child_name, const c
    return bson;
 }
 
-void
-group_and_update(mongoc_collection_t *source_coll, mongoc_collection_t *dest_coll, bson_t *accumulators)
+int64_t
+agg_copy(mongoc_collection_t *source_coll, mongoc_collection_t *dest_coll, bson_t *pipeline)
 {
+   int64_t count;
+   printf ("source_coll:\n");
+   mongoc_collection_dump (source_coll);
+   bson_error_t error;
    bson_t *options = BCON_NEW("cursor", "{", "}", "allowDiskUse", BCON_BOOL(1));
-   bson_t *pipeline = BCON_NEW("pipeline", "[", "{", "$group", "{", "_id", "$parent_id", BCON(accumulators), "}", "}", "]");
+   bson_printf ("agg_copy pipeline: %s\n", pipeline);
    mongoc_cursor_t *cursor = mongoc_collection_aggregate (source_coll, MONGOC_QUERY_NONE, pipeline, options, NULL);
-   // pending
+   count = mongoc_cursor_insert (cursor, dest_coll, NULL, &error);
    mongoc_cursor_destroy (cursor);
    bson_destroy (options);
+   printf ("dest_coll:\n");
+   mongoc_collection_dump (dest_coll);
+   return count;
+}
+
+int64_t
+group_and_update(mongoc_collection_t *source_coll, mongoc_collection_t *dest_coll, bson_t *accumulators)
+{
+   printf ("source_coll:\n");
+   mongoc_collection_dump (source_coll);
+   bson_t *options = BCON_NEW("cursor", "{", "}", "allowDiskUse", BCON_BOOL(1));
+   bson_t *pipeline = BCON_NEW("pipeline", "[", "{", "$group", "{", "_id", "$parent_id", BCON(accumulators), "}", "}", "]");
+   bson_printf ("group_and_update pipeline: %s\n", pipeline);
+   mongoc_cursor_t *cursor = mongoc_collection_aggregate (source_coll, MONGOC_QUERY_NONE, pipeline, options, NULL);
+   bool ret = true;
+   int64_t count = 0;
+   const bson_t *doc;
+   bson_error_t error;
+   while (ret && mongoc_cursor_next (cursor, &doc)) {
+      bson_t q, fields, *u;
+      bson_printf ("group_and_update doc: %s\n", doc);
+      bson_iter_t iter;
+      bson_iter_init_find (&iter, doc, "_id");
+      bson_init (&q);
+      bson_append_iter (&q, NULL, -1, &iter);
+      bson_init (&fields);
+      bson_printf ("group_and_update q: %s\n", &q);
+      bool do_update = false;
+      while (bson_iter_next (&iter)) {
+         if (!BSON_ITER_HOLDS_NULL(&iter)) {
+            bson_append_iter (&fields, NULL, -1, &iter);
+            do_update = true;
+         }
+      }
+      bson_printf ("group_and_update fields: %s\n", &fields);
+      u = BCON_NEW("$set", BCON_DOCUMENT(&fields));
+      bson_printf ("group_and_update u: %s\n", u);
+      if (do_update)
+         ret = mongoc_collection_update (dest_coll, MONGOC_UPDATE_NONE, &q, u, NULL, &error);
+      bson_destroy (&q);
+      bson_destroy (&fields);
+      bson_destroy (u);
+      if (!ret) {
+         fprintf (stderr, "mongoc_collection_update failure: %s\n", (char*)&error.message);
+      }
+      else
+         ++count;
+   }
+   if (mongoc_cursor_error (cursor, &error)) {
+      fprintf (stderr, "mongoc_cursor_insert failure: %s\n", (char*)&error.message);
+   }
+   mongoc_cursor_destroy (cursor);
+   bson_destroy (options);
+   printf ("dest_coll:\n");
+   mongoc_collection_dump (dest_coll);
+   return ret ? count : -1;
 }
 
 bson_t *
@@ -371,10 +429,12 @@ execute(const char *parent_name, int merge_spec_count, char **merge_spec)
    db = mongoc_client_get_database(client, database_name);
 
    temp_name = str_compose(parent_name, "_merge_temp");
-   temp_one_name = str_compose(parent_name, "_merge_temp");
+   temp_one_name = str_compose(parent_name, "_merge_temp_one");
    parent_coll = mongoc_database_get_collection (db, parent_name);
    temp_coll = mongoc_database_get_collection (db, temp_name);
    temp_one_coll = mongoc_database_get_collection (db, temp_one_name);
+   mongoc_collection_drop (temp_coll, &error);
+   mongoc_collection_drop (temp_one_coll, &error);
    bson_free ((void*)temp_name);
    bson_free ((void*)temp_one_name);
 
@@ -421,7 +481,6 @@ execute(const char *parent_name, int merge_spec_count, char **merge_spec)
    bson_destroy (pipeline);
    bson_destroy (one_accumulators);
    bson_destroy (one_projectors);
-   mongoc_collection_drop (temp_one_coll, &error);
    mongoc_collection_drop (temp_one_coll, &error);
 
    // many

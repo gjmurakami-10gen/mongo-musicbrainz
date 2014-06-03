@@ -31,21 +31,6 @@ module MongoMerge
 
     end
 
-    def agg_copy(source_coll, dest_coll, pipeline)
-      source_coll.aggregate(pipeline, :cursor => {}, :allowDiskUse => true).each_slice(SLICE_SIZE) do |docs|
-        bulk = dest_coll.initialize_unordered_bulk_op
-        docs.each{|doc| bulk.insert(doc)}
-        begin
-          bulk.execute
-        rescue => ex
-          puts "agg_copy exception: #{ex.inspect}"
-          raise ex
-        end
-        print ">#{docs.count}"
-        STDOUT.flush
-      end
-    end
-
     def child_by_merge_key(parent_key, child_name, child_key)
       [
           {'$project' => {
@@ -83,6 +68,21 @@ module MongoMerge
           {'$match' => {child_key => {'$ne' => nil}}},
           {'$project' => {'_id' => 0, 'parent_id' => "$#{child_key}", parent_key => '$$ROOT'}}
       ]
+    end
+
+    def agg_copy(source_coll, dest_coll, pipeline)
+      source_coll.aggregate(pipeline, :cursor => {}, :allowDiskUse => true).each_slice(SLICE_SIZE) do |docs|
+        bulk = dest_coll.initialize_unordered_bulk_op
+        docs.each{|doc| bulk.insert(doc)}
+        begin
+          bulk.execute
+        rescue => ex
+          puts "agg_copy exception: #{ex.inspect}"
+          raise ex
+        end
+        print ">#{docs.count}"
+        STDOUT.flush
+      end
     end
 
     def group_and_update(source_coll, dest_coll, accumulators)
