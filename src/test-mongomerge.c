@@ -168,6 +168,63 @@ bool
 check_fixture (mongoc_database_t *db, const char *fixture, const char *key)
 {
    printf ("check_fixture\n");
+   bool ret = true;
+   mongoc_collection_t *collection;
+   bson_error_t error;
+   bson_t bson_fixture;
+   bson_iter_t iter_fixture, iter_collection;
+
+   bson_init_from_json (&bson_fixture, fixture, strlen (fixture), &error) || WARN_ERROR;
+   bson_iter_init_find (&iter_fixture, &bson_fixture, key) || DIE;
+   BSON_ITER_HOLDS_DOCUMENT (&iter_fixture) || DIE;
+   bson_iter_recurse (&iter_fixture, &iter_collection) || DIE;
+   while (ret && bson_iter_next (&iter_collection)) {
+       const char *collection_name;
+       bson_iter_t iter_doc;
+       collection_name = bson_iter_key (&iter_collection);
+       printf ("collection_name: \"%s\"\n", collection_name);
+       collection = mongoc_database_get_collection (db, collection_name);
+       bson_t *query = BCON_NEW("$query", "{", "}", "$orderby", "{", "_id", BCON_INT32(1), "}");
+       //bson_printf ("check_fixture query: %s\n", query);
+       mongoc_cursor_t *cursor = mongoc_collection_find (collection, MONGOC_QUERY_NONE, 0, 0, 0, query, NULL, NULL);
+       if (mongoc_cursor_error (cursor, &error)) {
+          fprintf (stderr, "check_fixture mongoc_cursor_insert failure 0: %s\n", error.message);
+       }
+       BSON_ITER_HOLDS_ARRAY (&iter_collection) || DIE;
+       bson_iter_recurse (&iter_collection, &iter_doc) || DIE;
+       while (ret && bson_iter_next (&iter_doc)) {
+          const bson_t *db_doc;
+          bson_t *fixture_doc = bson_new_from_iter_document (&iter_doc);
+          if (mongoc_cursor_next (cursor, &db_doc)) {
+             ret = (bson_compare (fixture_doc, db_doc) == 0);
+             if (!ret) {
+                fprintf (stderr, "fixture comparison failed\n");
+                bson_printf ("expected fixture doc: %s\n", fixture_doc);
+                bson_printf ("actual db doc: %s\n", db_doc);
+             }
+          }
+          else {
+             ret = false;
+             bson_printf ("expected fixture doc: %s\n", fixture_doc);
+             printf ("actual db doc: %s\n", "(cursor next failed)");
+          }
+          bson_destroy (fixture_doc);
+       }
+       if (mongoc_cursor_error (cursor, &error)) {
+          fprintf (stderr, "check_fixture mongoc_cursor_insert failure 1: %s\n", error.message);
+       }
+       mongoc_cursor_destroy (cursor);
+       bson_destroy (query);
+       mongoc_collection_destroy (collection);
+   }
+   bson_destroy (&bson_fixture);
+   return ret;
+}
+
+void
+clear_fixture (mongoc_database_t *db, const char *fixture, const char *key)
+{
+   printf ("clear_fixture\n");
    mongoc_collection_t *collection;
    bson_error_t error;
    bson_t bson_fixture;
@@ -179,35 +236,13 @@ check_fixture (mongoc_database_t *db, const char *fixture, const char *key)
    bson_iter_recurse (&iter_fixture, &iter_collection) || DIE;
    while (bson_iter_next (&iter_collection)) {
        const char *collection_name;
-       bson_iter_t iter_doc;
        collection_name = bson_iter_key (&iter_collection);
        printf ("collection_name: \"%s\"\n", collection_name);
        collection = mongoc_database_get_collection (db, collection_name);
-       bson_t *query = bson_new(); //BCON_NEW("$query", "{", "}", "$orderby", "{", "_id", "1", "}");
-       bson_printf ("check_fixture query: %s\n", query);
-       mongoc_cursor_t *cursor = mongoc_collection_find (collection, MONGOC_QUERY_NONE, 0, 0, 0, query, NULL, NULL);
-       if (mongoc_cursor_error (cursor, &error)) {
-          fprintf (stderr, "check_fixture mongoc_cursor_insert failure 0: %s\n", error.message);
-       }
-       BSON_ITER_HOLDS_ARRAY (&iter_collection) || DIE;
-       bson_iter_recurse (&iter_collection, &iter_doc) || DIE;
-       while (bson_iter_next (&iter_doc)) {
-          const bson_t *db_doc;
-          bson_t *bson = bson_new_from_iter_document (&iter_doc); // review
-          bson_printf ("check_fixture fixture doc: %s\n", bson);
-          if (mongoc_cursor_next (cursor, &db_doc))
-             bson_printf ("check_fixture db doc: %s\n", db_doc);
-          bson_destroy (bson);
-       }
-       if (mongoc_cursor_error (cursor, &error)) {
-          fprintf (stderr, "check_fixture mongoc_cursor_insert failure 1: %s\n", error.message);
-       }
-       mongoc_cursor_destroy (cursor);
-       bson_destroy (query);
+       mongoc_collection_drop (collection, &error);
        mongoc_collection_destroy (collection);
    }
    bson_destroy (&bson_fixture);
-   return false;
 }
 
 double
@@ -247,13 +282,16 @@ void test_merge (mongoc_database_t *db, mongoc_collection_t *collection)
    execute ("owner", sizeof(merge_many_spec)/sizeof(char*), (char**) merge_many_spec);
    */
    load_fixture (db, one_to_one_fixture, "before");
-   //load_fixture (db, one_to_many_fixture, "before");
-   double start_time = dtimeofday();
-   int64_t count = execute ("people", sizeof(merge_one_spec)/sizeof(char*), (char**) merge_one_spec);
-   double end_time = dtimeofday();
-   double delta_time = end_time - start_time + 0.0000001;
-   printf("mongoc_cursor_insert: secs: %.2f, count: %lld, %lld docs/sec\n", delta_time, count, llround(count/delta_time));
-   check_fixture (db, one_to_one_fixture, "after");
+   execute ("people", sizeof(merge_one_spec)/sizeof(char*), (char**) merge_one_spec);
+   if (!check_fixture (db, one_to_one_fixture, "after"))
+      printf ("fixture comparison failed\n");
+   clear_fixture (db, one_to_one_fixture, "before");
+
+   load_fixture (db, one_to_many_fixture, "before");
+   execute ("owner", sizeof(merge_many_spec)/sizeof(char*), (char**) merge_many_spec);
+   if (!check_fixture (db, one_to_many_fixture, "after"))
+      printf ("fixture comparison failed\n");
+   clear_fixture (db, one_to_many_fixture, "before");
 }
 
 int

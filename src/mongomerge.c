@@ -189,7 +189,7 @@ mongoc_cursor_bulk_insert (mongoc_cursor_t *cursor,
                            bson_error_t *error)
 {
    int64_t ret = 0;
-   // pending
+   // pending - mongoc_cursor_bulk_insert
    return ret;
 }
 
@@ -319,7 +319,7 @@ group_and_update(mongoc_collection_t *source_coll, mongoc_collection_t *dest_col
    while (ret && mongoc_cursor_next (cursor, &doc)) {
       bson_t q, fields, *u;
       bson_printf ("group_and_update doc: %s\n", doc);
-      bson_iter_t iter;
+      bson_iter_t iter, iter_ary;
       bson_iter_init_find (&iter, doc, "_id");
       bson_init (&q);
       bson_append_iter (&q, NULL, -1, &iter);
@@ -327,10 +327,12 @@ group_and_update(mongoc_collection_t *source_coll, mongoc_collection_t *dest_col
       bson_printf ("group_and_update q: %s\n", &q);
       bool do_update = false;
       while (bson_iter_next (&iter)) {
-         if (!BSON_ITER_HOLDS_NULL(&iter)) {
-            bson_append_iter (&fields, NULL, -1, &iter);
-            do_update = true;
-         }
+         if (BSON_ITER_HOLDS_NULL(&iter))
+            continue;
+         if (BSON_ITER_HOLDS_ARRAY(&iter) && bson_iter_recurse(&iter, &iter_ary) && !bson_iter_next (&iter_ary))
+            continue;
+         bson_append_iter (&fields, NULL, -1, &iter);
+         do_update = true;
       }
       bson_printf ("group_and_update fields: %s\n", &fields);
       u = BCON_NEW("$set", BCON_DOCUMENT(&fields));
