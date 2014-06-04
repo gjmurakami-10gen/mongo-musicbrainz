@@ -25,6 +25,9 @@
 #include <stdio.h>
 #include <bcon.h>
 
+#define INSERT_BATCH_SIZE 1000
+#define BULK_OPS_SIZE 1000
+
 #define WARN_ERROR \
     (MONGOC_WARNING ("%s\n", error.message), true);
 #define DIE \
@@ -70,22 +73,8 @@ int64_t
 mongoc_cursor_bulk_insert (mongoc_cursor_t *cursor,
                            mongoc_collection_t *dest_coll,
                            const mongoc_write_concern_t *write_concern,
-                           bson_error_t *error);
-
-bson_t *
-child_by_merge_key(const char *parent_key, const char *child_name, const char *child_key);
-
-bson_t *
-parent_child_merge_key(const char *parent_key, const char *child_name, const char *child_key);
-
-bson_t *
-merge_one_all(bson_t *accumulators, bson_t *projectors);
-
-bson_t *
-copy_many_with_parent_id(const char *parent_key, const char *child_name, const char *child_key);
-
-bson_t *
-expand_spec(const char *parent_name, int merge_spec_count, char **merge_spec);
+                           bson_error_t *error,
+                           size_t bulk_ops_size);
 
 int64_t
 execute(const char *parent_name, int merge_spec_count, char **merge_spec);

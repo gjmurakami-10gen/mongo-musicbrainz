@@ -1,5 +1,14 @@
 # TO DO
 
+* mongomerge - C language version
+  * group_and_update with bulk
+  * refactor/modularize
+  * documentation
+  * review
+  * measure
+  * profiling
+  * valgrind
+
 * User Interface
   * reconsider with origin from both AR and MongoDB from scratch
   * USAGE

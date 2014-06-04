@@ -40,5 +40,4 @@ test-mongorestore:
 clean:
 	rm -fr $(CMDS) $(TESTS) *.o *.dSYM
 
-mongomerge.c: mongomerge.h
-
+mongomerge.o: mongomerge.h mongomerge.c

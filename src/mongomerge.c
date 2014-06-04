@@ -152,14 +152,14 @@ mongoc_cursor_insert_batch (mongoc_cursor_t *cursor,
 {
    bool ret = true;
    int64_t count = 0;
-   size_t i, n_docs;
    const bson_t *doc;
+   size_t n_docs = 0;
    bson_t **docs;
+   size_t i;
 
    docs = bson_malloc (batch_size * sizeof (bson_t*));
    for (i = 0; i < batch_size; i++)
        docs[i] = bson_new ();
-   n_docs = 0;
    while (ret && mongoc_cursor_next (cursor, &doc)) {
       bson_copy_to (doc, docs[n_docs++]);
       if (n_docs == batch_size) {
@@ -174,6 +174,8 @@ mongoc_cursor_insert_batch (mongoc_cursor_t *cursor,
       ret = mongoc_collection_insert_bulk (dest_coll, MONGOC_INSERT_NONE, (const bson_t**)docs, n_docs, write_concern, error);
       count += n_docs;
    }
+   if (!ret)
+      fprintf (stderr, "mongoc_cursor_insert_batch failure: %s\n", error->message);
    for (i = 0; i < batch_size; i++)
       bson_destroy (docs[i]);
    bson_free (docs);
@@ -184,12 +186,37 @@ int64_t
 mongoc_cursor_bulk_insert (mongoc_cursor_t *cursor,
                            mongoc_collection_t *dest_coll,
                            const mongoc_write_concern_t *write_concern,
-                           bson_error_t *error)
+                           bson_error_t *error,
+                           size_t bulk_ops_size)
 {
-   int64_t ret = 0;
+   int64_t ret = true;
+   int64_t count = 0;
+   const bson_t *doc;
+   size_t n_docs = 0;
+   mongoc_bulk_operation_t *bulk;
+   bson_t reply;
 
-   /* pending - mongoc_cursor_bulk_insert */
-   return ret;
+   bulk = mongoc_collection_create_bulk_operation (dest_coll, true, NULL);
+   while (ret && mongoc_cursor_next (cursor, &doc)) {
+      mongoc_bulk_operation_insert (bulk, doc);
+      if (++n_docs == bulk_ops_size) {
+         ret = mongoc_bulk_operation_execute (bulk, &reply, error);
+         if (!ret)
+            fprintf (stderr, "mongoc_cursor_bulk_insert execute failure: %s\n", error->message);
+         count += n_docs;
+         n_docs = 0;
+         mongoc_bulk_operation_destroy (bulk);
+         bulk = mongoc_collection_create_bulk_operation (dest_coll, true, NULL);
+      }
+   }
+   if (ret && n_docs > 0) {
+      ret = mongoc_bulk_operation_execute (bulk, &reply, error);
+      if (!ret)
+         fprintf (stderr, "mongoc_cursor_bulk_insert execute failure: %s\n", error->message);
+      count += n_docs;
+   }
+   mongoc_bulk_operation_destroy (bulk);
+   return ret ? count : -1;
 }
 
 bson_t *
@@ -313,7 +340,11 @@ agg_copy (mongoc_collection_t *source_coll,
 
    options = BCON_NEW ("cursor", "{", "}", "allowDiskUse", BCON_BOOL (1));
    cursor = mongoc_collection_aggregate (source_coll, MONGOC_QUERY_NONE, pipeline, options, NULL);
+   /*
    count = mongoc_cursor_insert (cursor, dest_coll, NULL, &error);
+   count = mongoc_cursor_insert_batch (cursor, dest_coll, NULL, &error, INSERT_BATCH_SIZE);
+   */
+   count = mongoc_cursor_bulk_insert (cursor, dest_coll, NULL, &error, BULK_OPS_SIZE);
    mongoc_cursor_destroy (cursor);
    bson_destroy (options);
    return count;
@@ -331,10 +362,14 @@ group_and_update (mongoc_collection_t *source_coll,
    int64_t count = 0;
    const bson_t *doc;
    bson_error_t error;
+   size_t n_docs = 0;
+   mongoc_bulk_operation_t *bulk;
+   bson_t reply;
 
    options = BCON_NEW ("cursor", "{", "}", "allowDiskUse", BCON_BOOL (1));
    pipeline = BCON_NEW ("pipeline", "[", "{", "$group", "{", "_id", "$parent_id", BCON (accumulators), "}", "}", "]");
    cursor = mongoc_collection_aggregate (source_coll, MONGOC_QUERY_NONE, pipeline, options, NULL);
+   bulk = mongoc_collection_create_bulk_operation (dest_coll, true, NULL);
    while (ret && mongoc_cursor_next (cursor, &doc)) {
       bson_t q, fields, *u;
       bson_iter_t iter, iter_ary;
@@ -355,6 +390,18 @@ group_and_update (mongoc_collection_t *source_coll,
       u = BCON_NEW ("$set", BCON_DOCUMENT (&fields));
       if (do_update)
          ret = mongoc_collection_update (dest_coll, MONGOC_UPDATE_NONE, &q, u, NULL, &error);
+      /*
+      if (do_update) {
+         mongoc_bulk_operation_update_one (bulk, &q, u, false);
+         if (++n_docs == batch_size) {
+            ret = mongoc_bulk_operation_execute (bulk, &reply, &error);
+            count += n_docs;
+            n_docs = 0;
+            mongoc_bulk_operation_destroy (bulk);
+            bulk = mongoc_collection_create_bulk_operation (collection, true, NULL);
+         }
+      }
+      */
       bson_destroy (&q);
       bson_destroy (&fields);
       bson_destroy (u);
@@ -364,11 +411,16 @@ group_and_update (mongoc_collection_t *source_coll,
       else
          ++count;
    }
+   if (ret && n_docs > 0) {
+      ret = mongoc_bulk_operation_execute (bulk, &reply, &error);
+      count += n_docs;
+   }
    if (mongoc_cursor_error (cursor, &error)) {
       fprintf (stderr, "mongoc_cursor_insert failure: %s\n", (char*)&error.message);
       ret = false;
    }
    mongoc_cursor_destroy (cursor);
+   mongoc_bulk_operation_destroy (bulk);
    bson_destroy (options);
    return ret ? count : -1;
 }
