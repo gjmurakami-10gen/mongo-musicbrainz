@@ -44,6 +44,7 @@ MONGODB_URI = "mongodb://localhost:#{MONGOD_PORT}/#{MONGO_DBNAME}"
 ENV['MONGODB_URI'] = MONGODB_URI
 
 MERGE_SPEC = 'schema/merge_spec_flat.json'
+MONGOMERGE = 'src/mongomerge' #'script/merge_agg.rb' #
 
 RSpec::Core::RakeTask.new(:spec)
 
@@ -350,7 +351,7 @@ namespace :merge do
       unless merged_coll.find({merged: merge_stamp}).to_a.empty?
         puts "info: merge #{parent_collection.inspect} skipped - already stamped in collection #{merged_name.inspect}"
       else
-        sh "MONGODB_URI='#{MONGODB_URI}' time script/merge_agg.rb #{parent_collection} #{children.join(' ')}"
+        sh "MONGODB_URI='#{MONGODB_URI}' time #{MONGOMERGE} #{parent_collection} #{children.join(' ')}"
         merged_coll.insert({merged: merge_stamp})
       end
       client.close

@@ -1,13 +1,12 @@
 # TO DO
 
 * mongomerge - C language version
-  * style * arg white space alignment
-  * refactor/modularize
-  * documentation
-  * review
+  * valgrind
+  * MONGOMERGE = 'src/mongomerge' #'script/merge_agg.rb'
   * measure
   * profiling
-  * valgrind
+  * documentation
+* mbdump_to_mongo - C language version
 
 * User Interface
   * reconsider with origin from both AR and MongoDB from scratch

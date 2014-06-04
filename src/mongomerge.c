@@ -59,7 +59,7 @@ bson_new_from_iter_array (bson_iter_t *iter)
    while (bson_iter_next (&iter_array)) {
       bson_t *bson_sub;
 
-      bson_sub = bson_new_from_iter_document (&iter_array); /* review */
+      bson_sub = bson_new_from_iter_document (&iter_array);
       bson_append_document (bson, bson_iter_key (&iter_array), -1, bson_sub) || DIE;
       bson_destroy (bson_sub);
    }
