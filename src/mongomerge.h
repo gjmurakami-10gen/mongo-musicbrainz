@@ -54,14 +54,6 @@ mongoc_collection_dump (mongoc_collection_t *collection);
 bool
 mongoc_collection_remove_all (mongoc_collection_t *collection);
 
-mongoc_cursor_t *
-mongoc_collection_aggregate_pipeline  (mongoc_collection_t       *collection,
-                                       mongoc_query_flags_t       flags,
-                                       const bson_t              *pipeline,
-                                       const bson_t              *options,
-                                       const mongoc_read_prefs_t *read_prefs) BSON_GNUC_WARN_UNUSED_RESULT;
-
-
 int64_t
 mongoc_cursor_insert (mongoc_cursor_t *cursor,
                       mongoc_collection_t *dest_coll,
