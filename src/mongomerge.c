@@ -433,6 +433,7 @@ group_and_update (mongoc_collection_t *source_coll,
    mongoc_cursor_destroy (cursor);
    mongoc_bulk_operation_destroy (bulk);
    bson_destroy (options);
+   bson_destroy (pipeline);
    return ret ? count : -1;
 }
 
@@ -544,6 +545,7 @@ one_children_append (const char          *parent_name,
    bson_destroy (one_accumulators);
    bson_destroy (one_projectors);
    mongoc_collection_drop (temp_one_coll, &error);
+   mongoc_collection_destroy (temp_one_coll);
 }
 
 void
