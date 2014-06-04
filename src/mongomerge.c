@@ -388,26 +388,25 @@ group_and_update (mongoc_collection_t *source_coll,
          do_update = true;
       }
       u = BCON_NEW ("$set", BCON_DOCUMENT (&fields));
+      /*
       if (do_update)
          ret = mongoc_collection_update (dest_coll, MONGOC_UPDATE_NONE, &q, u, NULL, &error);
-      /*
+      */
       if (do_update) {
          mongoc_bulk_operation_update_one (bulk, &q, u, false);
-         if (++n_docs == batch_size) {
+         if (++n_docs == BULK_OPS_SIZE) {
             ret = mongoc_bulk_operation_execute (bulk, &reply, &error);
             count += n_docs;
             n_docs = 0;
             mongoc_bulk_operation_destroy (bulk);
-            bulk = mongoc_collection_create_bulk_operation (collection, true, NULL);
+            bulk = mongoc_collection_create_bulk_operation (dest_coll, true, NULL);
          }
       }
-      */
       bson_destroy (&q);
       bson_destroy (&fields);
       bson_destroy (u);
-      if (!ret) {
+      if (!ret)
          fprintf (stderr, "mongoc_collection_update failure: %s\n", (char*)&error.message);
-      }
       else
          ++count;
    }
@@ -465,9 +464,8 @@ expand_spec (const char *parent_name,
          *dot = '\0';
          child_key = dot + 1;
       }
-      if (*child_s != '\0') {
+      if (*child_s != '\0')
          child_name = child_s;
-      }
       /* check non-empty, legal chars */
       BCON_APPEND (&bson_array, "0", "[", relation, parent_key, child_name, child_key, "]");
       bson_free (s);
@@ -476,49 +474,29 @@ expand_spec (const char *parent_name,
    return bson;
 }
 
-int64_t
-execute (const char *parent_name,
-         int merge_spec_count,
-         char **merge_spec)
+void
+one_children_append (const char *parent_name,
+                     bson_iter_t *iter_spec_top,
+                     mongoc_database_t *db,
+                     mongoc_collection_t *parent_coll,
+                     mongoc_collection_t *temp_coll,
+                     bson_t *all_accumulators)
 {
-   int64_t count = 0;
-   const char *uristr = "mongodb://localhost/test";
-   const char *database_name;
-   mongoc_uri_t *uri;
-   mongoc_client_t *client;
-   mongoc_database_t *db;
-   const char *temp_name, *temp_one_name;
-   mongoc_collection_t *parent_coll, *child_coll, *temp_coll, *temp_one_coll;
-   bson_t *bson_spec, *all_accumulators, *one_accumulators, *one_projectors, *pipeline;
-   bson_iter_t iter_top, iter_spec, iter;
+   const char *temp_one_name;
+   mongoc_collection_t *child_coll, *temp_one_coll;
+   bson_t *one_accumulators, *one_projectors, *pipeline;
+   bson_iter_t iter_spec, iter;
    bson_error_t error;
 
-   uristr = getenv ("MONGODB_URI");
-   uri = mongoc_uri_new (uristr);
-   client = mongoc_client_new (uristr);
-   database_name = mongoc_uri_get_database (uri);
-   db = mongoc_client_get_database (client, database_name);
-
-   temp_name = str_compose (parent_name, "_merge_temp");
    temp_one_name = str_compose (parent_name, "_merge_temp_one");
-   parent_coll = mongoc_database_get_collection (db, parent_name);
-   temp_coll = mongoc_database_get_collection (db, temp_name);
    temp_one_coll = mongoc_database_get_collection (db, temp_one_name);
-   mongoc_collection_drop (temp_coll, &error);
    mongoc_collection_drop (temp_one_coll, &error);
-   bson_free ((void*)temp_name);
    bson_free ((void*)temp_one_name);
 
-   all_accumulators = bson_new ();
    one_accumulators = bson_new ();
    one_projectors = bson_new ();
 
-   bson_spec = expand_spec (parent_name, merge_spec_count, merge_spec);
-   bson_iter_init_find (&iter_top, bson_spec, "merge_spec") || DIE;
-   BSON_ITER_HOLDS_ARRAY (&iter_top) || DIE;
-
-   /* one */
-   bson_iter_recurse (&iter_top, &iter_spec) || DIE;
+   bson_iter_recurse (iter_spec_top, &iter_spec) || DIE;
    while (bson_iter_next (&iter_spec)) {
       const char *type, *parent_key, *child_name, *child_key, *dollar_parent_key;
 
@@ -554,9 +532,20 @@ execute (const char *parent_name,
    bson_destroy (one_accumulators);
    bson_destroy (one_projectors);
    mongoc_collection_drop (temp_one_coll, &error);
+}
 
-   /* many */
-   bson_iter_recurse (&iter_top, &iter_spec) || DIE;
+void
+many_children_append (const char *parent_name,
+                     bson_iter_t *iter_spec_top,
+                     mongoc_database_t *db,
+                     mongoc_collection_t *temp_coll,
+                     bson_t *all_accumulators)
+{
+   mongoc_collection_t *child_coll;
+   bson_iter_t iter_spec, iter;
+   bson_t *pipeline;
+
+   bson_iter_recurse (iter_spec_top, &iter_spec) || DIE;
    while (bson_iter_next (&iter_spec)) {
       const char *type, *parent_key, *child_name, *child_key, *dollar_parent_key;
 
@@ -581,13 +570,52 @@ execute (const char *parent_name,
       BCON_APPEND (all_accumulators, parent_key, "{", "$push", dollar_parent_key, "}");
       bson_free ((void*)dollar_parent_key);
    }
-   bson_destroy (bson_spec);
+}
 
-   group_and_update (temp_coll, parent_coll, all_accumulators);
+int64_t
+execute (const char *parent_name,
+         int merge_spec_count,
+         char **merge_spec)
+{
+   int64_t count;
+   const char *uristr = "mongodb://localhost/test";
+   const char *database_name;
+   mongoc_uri_t *uri;
+   mongoc_client_t *client;
+   mongoc_database_t *db;
+   const char *temp_name;
+   mongoc_collection_t *parent_coll, *temp_coll;
+   bson_t *bson_spec, *all_accumulators;
+   bson_iter_t iter_spec_top;
+   bson_error_t error;
+
+   uristr = getenv ("MONGODB_URI");
+   uri = mongoc_uri_new (uristr);
+   client = mongoc_client_new (uristr);
+   database_name = mongoc_uri_get_database (uri);
+   db = mongoc_client_get_database (client, database_name);
+   parent_coll = mongoc_database_get_collection (db, parent_name);
+
+   temp_name = str_compose (parent_name, "_merge_temp");
+   temp_coll = mongoc_database_get_collection (db, temp_name);
+   mongoc_collection_drop (temp_coll, &error);
+   bson_free ((void*)temp_name);
+
+   bson_spec = expand_spec (parent_name, merge_spec_count, merge_spec);
+   bson_iter_init_find (&iter_spec_top, bson_spec, "merge_spec") || DIE;
+   BSON_ITER_HOLDS_ARRAY (&iter_spec_top) || DIE;
+   all_accumulators = bson_new ();
+
+   one_children_append (parent_name, &iter_spec_top, db, parent_coll, temp_coll, all_accumulators);
+
+   many_children_append (parent_name, &iter_spec_top, db, temp_coll, all_accumulators);
+
+   count = group_and_update (temp_coll, parent_coll, all_accumulators);
+
    bson_destroy (all_accumulators);
+   bson_destroy (bson_spec);
    mongoc_collection_drop (temp_coll, &error);
    mongoc_collection_destroy (temp_coll);
-
    mongoc_collection_destroy (parent_coll);
    mongoc_database_destroy (db);
    mongoc_client_destroy (client);

@@ -1,7 +1,8 @@
 # TO DO
 
 * mongomerge - C language version
-  * group_and_update with bulk
+  * check errors
+  * style * arg white space alignment
   * refactor/modularize
   * documentation
   * review

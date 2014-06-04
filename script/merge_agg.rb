@@ -134,22 +134,10 @@ module MongoMerge
       end
     end
 
-    def execute(parent_name, merge_spec)
-      one_spec = []
-      many_spec = []
-
-      expand_spec(parent_name, merge_spec, one_spec, many_spec)
-
-      mongo_client = Mongo::MongoClient.from_uri
-      db = mongo_client.db
-      parent_coll = db[parent_name]
-      temp_name = "#{parent_name}_merge_temp"
+    def one_children_append(parent_name, one_spec, db, parent_coll, temp_coll, all_accumulators)
       temp_one_name = "#{parent_name}_merge_temp_one"
-      db.drop_collection(temp_name)
       db.drop_collection(temp_one_name)
-      temp_coll = db[temp_name]
       temp_one_coll = db[temp_one_name]
-      all_accumulators = {}
       one_accumulators = {}
       one_projectors = {}
 
@@ -167,6 +155,10 @@ module MongoMerge
       end
       agg_copy(temp_one_coll, temp_coll, merge_one_all(one_accumulators, one_projectors))
 
+      db.drop_collection(temp_one_name)
+    end
+
+    def many_children_append(parent_name, many_spec, db, temp_coll, all_accumulators)
       many_spec.each do |spec|
         x, parent_key, child_name, child_key = spec
         puts "info: spec: #{spec.inspect}"
@@ -176,6 +168,25 @@ module MongoMerge
         all_accumulators.merge!(parent_key => {'$push' => "$#{parent_key}"})
         puts
       end
+    end
+
+    def execute(parent_name, merge_spec)
+      one_spec = []
+      many_spec = []
+
+      expand_spec(parent_name, merge_spec, one_spec, many_spec)
+
+      mongo_client = Mongo::MongoClient.from_uri
+      db = mongo_client.db
+
+      parent_coll = db[parent_name]
+      temp_name = "#{parent_name}_merge_temp"
+      db.drop_collection(temp_name)
+      temp_coll = db[temp_name]
+      all_accumulators = {}
+
+      one_children_append(parent_name, one_spec, db, parent_coll, temp_coll, all_accumulators)
+      many_children_append(parent_name, many_spec, db, temp_coll, all_accumulators)
 
       puts "info: group: #{parent_name}"
       print "info: progress: "
@@ -184,7 +195,6 @@ module MongoMerge
       puts
 
       db.drop_collection(temp_name)
-      db.drop_collection(temp_one_name)
       mongo_client.close
       doc_count
     end
