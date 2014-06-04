@@ -55,13 +55,13 @@ void test_suite (mongoc_database_t *db, mongoc_collection_t *collection)
    bson_error_t error;
    bson_t query = BSON_INITIALIZER;
    int64_t count = mongoc_collection_count (collection, MONGOC_QUERY_NONE, &query, 0, 0, NULL, &error);
-   printf("mongoc_collection_count count: %lld\n", count);
-   double start_time = dtimeofday();
+   printf ("mongoc_collection_count count: %lld\n", count);
+   double start_time = dtimeofday ();
    mongoc_cursor_t *cursor = mongoc_collection_find (collection, MONGOC_QUERY_NONE, 0, 0, 0, &query, NULL, NULL);
    count = mongoc_cursor_dump (cursor);
-   double end_time = dtimeofday();
+   double end_time = dtimeofday ();
    double delta_time = end_time - start_time + 0.0000001;
-   printf("mongoc_cursor_insert: secs: %.2f, count: %lld, %.2f docs/sec\n", delta_time, count, count/delta_time);
+   printf ("mongoc_cursor_insert: secs: %.2f, count: %lld, %.2f docs/sec\n", delta_time, count, count/delta_time);
 }
 
 int
@@ -83,13 +83,13 @@ main (int argc,
    uri = mongoc_uri_new (uristr);
    client = mongoc_client_new_from_uri (uri);
    database_name = mongoc_uri_get_database (uri);
-   db = mongoc_client_get_database(client, database_name);
+   db = mongoc_client_get_database (client, database_name);
    collection = mongoc_database_get_collection (db, "test");
 
    test_suite (db, collection);
 
    mongoc_collection_destroy (collection);
-   mongoc_database_destroy(db);
+   mongoc_database_destroy (db);
    mongoc_client_destroy (client);
    mongoc_uri_destroy (uri);
 

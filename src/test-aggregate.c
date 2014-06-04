@@ -25,7 +25,8 @@
 #include <bcon.h>
 
 double
-dtimeofday () {
+dtimeofday ()
+{
    struct timeval tv;
    bson_gettimeofday (&tv, NULL);
    return tv.tv_sec + 0.000001 * tv.tv_usec;
@@ -36,28 +37,36 @@ mongoc_cursor_dump (mongoc_cursor_t *cursor)
 {
    int64_t count = 0;
    const bson_t *doc;
+   bson_error_t error;
+
    while (mongoc_cursor_next (cursor, &doc)) {
       const char *str;
+
       str = bson_as_json (doc, NULL);
       printf ("%s\n", str);
       bson_free ((void*)str);
       ++count;
    }
-   bson_error_t error;
    if (mongoc_cursor_error (cursor, &error)) {
       fprintf (stderr, "Cursor failure: %s\n", error.message);
    }
    return count;
 }
 
-void test_suite (mongoc_database_t *db, mongoc_collection_t *collection)
+void test_suite (mongoc_database_t   *db,
+                 mongoc_collection_t *collection)
 {
    bson_error_t error;
    bson_t query = BSON_INITIALIZER;
-   int64_t count = mongoc_collection_count (collection, MONGOC_QUERY_NONE, &query, 0, 0, NULL, &error);
-   printf("mongoc_collection_count count: %lld\n", count);
-   bson_t *options = BCON_NEW("cursor", "{", "}", "allowDiskUse", BCON_BOOL(1));
-   bson_t *pipeline = BCON_NEW (
+   int64_t count;
+   bson_t *options, *pipeline;
+   double start_time, end_time, delta_time;
+   mongoc_cursor_t *cursor;
+
+   count = mongoc_collection_count (collection, MONGOC_QUERY_NONE, &query, 0, 0, NULL, &error);
+   printf ("mongoc_collection_count count: %lld\n", count);
+   options = BCON_NEW ("cursor", "{", "}", "allowDiskUse", BCON_BOOL (1));
+   pipeline = BCON_NEW (
       "pipeline", "[",
           "{",
              "$match", "{",
@@ -65,21 +74,21 @@ void test_suite (mongoc_database_t *db, mongoc_collection_t *collection)
           "}",
           "{",
              "$project", "{",
-                "text", BCON_INT32(1),
+                "text", BCON_INT32 (1),
              "}",
           "}",
        "]"
    );
-   double start_time = dtimeofday();
-   mongoc_cursor_t *cursor = mongoc_collection_aggregate (collection, MONGOC_QUERY_NONE, pipeline, options, NULL);
+   start_time = dtimeofday ();
+   cursor = mongoc_collection_aggregate (collection, MONGOC_QUERY_NONE, pipeline, options, NULL);
    count = mongoc_cursor_dump (cursor);
-   double end_time = dtimeofday();
-   double delta_time = end_time - start_time + 0.0000001;
-   printf("mongoc_cursor_dump: secs: %.2f, count: %lld, %.2f docs/sec\n", delta_time, count, count/delta_time);
+   end_time = dtimeofday ();
+   delta_time = end_time - start_time + 0.0000001;
+   printf ("mongoc_cursor_dump: secs: %.2f, count: %lld, %.2f docs/sec\n", delta_time, count, count/delta_time);
 }
 
 int
-main (int argc,
+main (int   argc,
       char *argv[])
 {
    const char *default_uristr = "mongodb://localhost/test";
@@ -97,13 +106,13 @@ main (int argc,
    uri = mongoc_uri_new (uristr);
    client = mongoc_client_new_from_uri (uri);
    database_name = mongoc_uri_get_database (uri);
-   db = mongoc_client_get_database(client, database_name);
+   db = mongoc_client_get_database (client, database_name);
    collection = mongoc_database_get_collection (db, "test");
 
    test_suite (db, collection);
 
    mongoc_collection_destroy (collection);
-   mongoc_database_destroy(db);
+   mongoc_database_destroy (db);
    mongoc_client_destroy (client);
    mongoc_uri_destroy (uri);
 

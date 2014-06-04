@@ -67,7 +67,7 @@ bson_new_from_iter_array (bson_iter_t *iter)
 }
 
 void
-bson_printf (const char *format,
+bson_printf (const char   *format,
              const bson_t *bson)
 {
    const char *str;
@@ -79,7 +79,7 @@ bson_printf (const char *format,
 
 const char *
 bson_iter_next_utf8 (bson_iter_t *iter,
-                     uint32_t     *length)
+                     uint32_t    *length)
 {
     bson_iter_next (iter) || DIE;
     BSON_ITER_HOLDS_UTF8 (iter) || DIE;
@@ -123,10 +123,10 @@ mongoc_collection_remove_all (mongoc_collection_t *collection)
 }
 
 int64_t
-mongoc_cursor_insert (mongoc_cursor_t *cursor,
-                      mongoc_collection_t *dest_coll,
+mongoc_cursor_insert (mongoc_cursor_t              *cursor,
+                      mongoc_collection_t          *dest_coll,
                       const mongoc_write_concern_t *write_concern,
-                      bson_error_t *error)
+                      bson_error_t                 *error)
 {
    bool ret = true;
    int64_t count = 0;
@@ -144,11 +144,11 @@ mongoc_cursor_insert (mongoc_cursor_t *cursor,
 }
 
 int64_t
-mongoc_cursor_insert_batch (mongoc_cursor_t *cursor,
-                           mongoc_collection_t *dest_coll,
-                           const mongoc_write_concern_t *write_concern,
-                           bson_error_t *error,
-                           size_t batch_size)
+mongoc_cursor_insert_batch (mongoc_cursor_t              *cursor,
+                            mongoc_collection_t          *dest_coll,
+                            const mongoc_write_concern_t *write_concern,
+                            bson_error_t                 *error,
+                            size_t                        batch_size)
 {
    bool ret = true;
    int64_t count = 0;
@@ -164,18 +164,22 @@ mongoc_cursor_insert_batch (mongoc_cursor_t *cursor,
       bson_copy_to (doc, docs[n_docs++]);
       if (n_docs == batch_size) {
          ret = mongoc_collection_insert_bulk (dest_coll, MONGOC_INSERT_NONE, (const bson_t**)docs, n_docs, write_concern, error);
+         if (ret)
+            count += n_docs;
+         else
+            fprintf (stderr, "mongoc_cursor_insert_batch failure: %s\n", error->message);
          for (i = 0; i < batch_size; i++)
             bson_reinit (docs[i]);
-         count += n_docs;
          n_docs = 0;
       }
    }
    if (ret && n_docs > 0) {
       ret = mongoc_collection_insert_bulk (dest_coll, MONGOC_INSERT_NONE, (const bson_t**)docs, n_docs, write_concern, error);
-      count += n_docs;
+      if (ret)
+         count += n_docs;
+      else
+         fprintf (stderr, "mongoc_cursor_insert_batch failure: %s\n", error->message);
    }
-   if (!ret)
-      fprintf (stderr, "mongoc_cursor_insert_batch failure: %s\n", error->message);
    for (i = 0; i < batch_size; i++)
       bson_destroy (docs[i]);
    bson_free (docs);
@@ -183,11 +187,11 @@ mongoc_cursor_insert_batch (mongoc_cursor_t *cursor,
 }
 
 int64_t
-mongoc_cursor_bulk_insert (mongoc_cursor_t *cursor,
-                           mongoc_collection_t *dest_coll,
+mongoc_cursor_bulk_insert (mongoc_cursor_t              *cursor,
+                           mongoc_collection_t          *dest_coll,
                            const mongoc_write_concern_t *write_concern,
-                           bson_error_t *error,
-                           size_t bulk_ops_size)
+                           bson_error_t                 *error,
+                           size_t                        bulk_ops_size)
 {
    int64_t ret = true;
    int64_t count = 0;
@@ -201,9 +205,10 @@ mongoc_cursor_bulk_insert (mongoc_cursor_t *cursor,
       mongoc_bulk_operation_insert (bulk, doc);
       if (++n_docs == bulk_ops_size) {
          ret = mongoc_bulk_operation_execute (bulk, &reply, error);
-         if (!ret)
+         if (ret)
+            count += n_docs;
+         else
             fprintf (stderr, "mongoc_cursor_bulk_insert execute failure: %s\n", error->message);
-         count += n_docs;
          n_docs = 0;
          mongoc_bulk_operation_destroy (bulk);
          bulk = mongoc_collection_create_bulk_operation (dest_coll, true, NULL);
@@ -211,9 +216,10 @@ mongoc_cursor_bulk_insert (mongoc_cursor_t *cursor,
    }
    if (ret && n_docs > 0) {
       ret = mongoc_bulk_operation_execute (bulk, &reply, error);
-      if (!ret)
+      if (ret)
+         count += n_docs;
+      else
          fprintf (stderr, "mongoc_cursor_bulk_insert execute failure: %s\n", error->message);
-      count += n_docs;
    }
    mongoc_bulk_operation_destroy (bulk);
    return ret ? count : -1;
@@ -331,7 +337,7 @@ copy_many_with_parent_id (const char *parent_key,
 int64_t
 agg_copy (mongoc_collection_t *source_coll,
           mongoc_collection_t *dest_coll,
-          bson_t *pipeline)
+          bson_t              *pipeline)
 {
    bson_t *options;
    mongoc_cursor_t *cursor;
@@ -353,7 +359,7 @@ agg_copy (mongoc_collection_t *source_coll,
 int64_t
 group_and_update (mongoc_collection_t *source_coll,
                   mongoc_collection_t *dest_coll,
-                  bson_t *accumulators)
+                  bson_t              *accumulators)
 {
    bson_t *options;
    bson_t *pipeline;
@@ -396,7 +402,10 @@ group_and_update (mongoc_collection_t *source_coll,
          mongoc_bulk_operation_update_one (bulk, &q, u, false);
          if (++n_docs == BULK_OPS_SIZE) {
             ret = mongoc_bulk_operation_execute (bulk, &reply, &error);
-            count += n_docs;
+            if (ret)
+               count += n_docs;
+            else
+               fprintf (stderr, "group_and_update bulk execute failure: %s\n", (char*)&error.message);
             n_docs = 0;
             mongoc_bulk_operation_destroy (bulk);
             bulk = mongoc_collection_create_bulk_operation (dest_coll, true, NULL);
@@ -412,7 +421,10 @@ group_and_update (mongoc_collection_t *source_coll,
    }
    if (ret && n_docs > 0) {
       ret = mongoc_bulk_operation_execute (bulk, &reply, &error);
-      count += n_docs;
+      if (ret)
+         count += n_docs;
+      else
+         fprintf (stderr, "group_and_update bulk execute failure: %s\n", (char*)&error.message);
    }
    if (mongoc_cursor_error (cursor, &error)) {
       fprintf (stderr, "mongoc_cursor_insert failure: %s\n", (char*)&error.message);
@@ -426,8 +438,8 @@ group_and_update (mongoc_collection_t *source_coll,
 
 bson_t *
 expand_spec (const char *parent_name,
-             int merge_spec_count,
-             char **merge_spec)
+             int         merge_spec_count,
+             char      **merge_spec)
 {
    bson_t *bson, bson_array;
    int i;
@@ -475,12 +487,12 @@ expand_spec (const char *parent_name,
 }
 
 void
-one_children_append (const char *parent_name,
-                     bson_iter_t *iter_spec_top,
-                     mongoc_database_t *db,
+one_children_append (const char          *parent_name,
+                     bson_iter_t         *iter_spec_top,
+                     mongoc_database_t   *db,
                      mongoc_collection_t *parent_coll,
                      mongoc_collection_t *temp_coll,
-                     bson_t *all_accumulators)
+                     bson_t              *all_accumulators)
 {
    const char *temp_one_name;
    mongoc_collection_t *child_coll, *temp_one_coll;
@@ -535,11 +547,11 @@ one_children_append (const char *parent_name,
 }
 
 void
-many_children_append (const char *parent_name,
-                     bson_iter_t *iter_spec_top,
-                     mongoc_database_t *db,
+many_children_append (const char         *parent_name,
+                     bson_iter_t         *iter_spec_top,
+                     mongoc_database_t   *db,
                      mongoc_collection_t *temp_coll,
-                     bson_t *all_accumulators)
+                     bson_t              *all_accumulators)
 {
    mongoc_collection_t *child_coll;
    bson_iter_t iter_spec, iter;
@@ -574,8 +586,8 @@ many_children_append (const char *parent_name,
 
 int64_t
 execute (const char *parent_name,
-         int merge_spec_count,
-         char **merge_spec)
+         int         merge_spec_count,
+         char      **merge_spec)
 {
    int64_t count;
    const char *uristr = "mongodb://localhost/test";

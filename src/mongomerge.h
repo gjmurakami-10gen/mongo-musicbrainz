@@ -31,13 +31,13 @@
 #define WARN_ERROR \
     (MONGOC_WARNING ("%s\n", error.message), true);
 #define DIE \
-    ((void)printf ("%s:%u: failed execution\n", __FILE__, __LINE__), abort(), false)
+    ((void)printf ("%s:%u: failed execution\n", __FILE__, __LINE__), abort (), false)
 #define EX(e) \
     ((void) ((e) ? 0 : __ex (#e, __FILE__, __LINE__)))
 #define __ex(e, file, line) \
-    ((void)printf ("%s:%u: failed execution `%s'\n", file, line, e), abort())
+    ((void)printf ("%s:%u: failed execution `%s'\n", file, line, e), abort ())
 #define ASSERT(e) \
-    assert(e)
+    assert (e)
 
 bson_t *
 bson_new_from_iter_document (bson_iter_t *iter) BSON_GNUC_WARN_UNUSED_RESULT;
@@ -58,25 +58,28 @@ bool
 mongoc_collection_remove_all (mongoc_collection_t *collection);
 
 int64_t
-mongoc_cursor_insert (mongoc_cursor_t *cursor,
-                      mongoc_collection_t *dest_coll,
+mongoc_cursor_insert (mongoc_cursor_t              *cursor,
+                      mongoc_collection_t          *dest_coll,
                       const mongoc_write_concern_t *write_concern,
-                      bson_error_t *error);
+                      bson_error_t                 *error);
 
 int64_t
-mongoc_cursor_insert_batch (mongoc_cursor_t *cursor,
-                           mongoc_collection_t *dest_coll,
+mongoc_cursor_insert_batch (mongoc_cursor_t             *cursor,
+                           mongoc_collection_t          *dest_coll,
                            const mongoc_write_concern_t *write_concern,
-                           bson_error_t *error, size_t batch_size) BSON_GNUC_DEPRECATED_FOR (mongoc_cursor_insert_batch);
+                           bson_error_t                 *error,
+                           size_t                        batch_size) BSON_GNUC_DEPRECATED_FOR (mongoc_cursor_insert_batch);
 
 int64_t
-mongoc_cursor_bulk_insert (mongoc_cursor_t *cursor,
-                           mongoc_collection_t *dest_coll,
+mongoc_cursor_bulk_insert (mongoc_cursor_t              *cursor,
+                           mongoc_collection_t          *dest_coll,
                            const mongoc_write_concern_t *write_concern,
-                           bson_error_t *error,
-                           size_t bulk_ops_size);
+                           bson_error_t                 *error,
+                           size_t                        bulk_ops_size);
 
 int64_t
-execute(const char *parent_name, int merge_spec_count, char **merge_spec);
+execute (const char *parent_name,
+         int merge_spec_count,
+         char **merge_spec);
 
 #endif

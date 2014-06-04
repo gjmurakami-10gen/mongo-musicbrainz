@@ -37,7 +37,7 @@ log_local_handler (mongoc_log_level_t  log_level,
 }
 
 int
-main (int argc,
+main (int   argc,
       char *argv[])
 {
    char **argvp;
@@ -47,12 +47,12 @@ main (int argc,
       DIE; /* pending - usage */
    }
    mongoc_init ();
-   mongoc_log_set_handler(log_local_handler, NULL);
+   mongoc_log_set_handler (log_local_handler, NULL);
 
    argvp = argv;
    parent_name = *argv++;
 
-   execute(parent_name, argc - 2, argvp);
+   execute (parent_name, argc - 2, argvp);
 
    mongoc_cleanup ();
 

@@ -72,7 +72,8 @@ test_reader_from_handle_destroy (void * handle)
 }
 
 double
-dtimeofday () {
+dtimeofday ()
+{
    struct timeval tv;
 
    bson_gettimeofday (&tv, NULL);
@@ -80,7 +81,9 @@ dtimeofday () {
 }
 
 int64_t
-collection_load_from_file_insert_single (mongoc_collection_t *collection, const char *file_name, bool do_insert)
+collection_load_from_file_insert_single (mongoc_collection_t *collection,
+                                         const char          *file_name,
+                                         bool                 do_insert)
 {
    int64_t count = 0;
    int fd;
@@ -103,7 +106,9 @@ collection_load_from_file_insert_single (mongoc_collection_t *collection, const 
 }
 
 int64_t
-collection_load_from_file_insert_docs (mongoc_collection_t *collection, const char *file_name, size_t batch_size)
+collection_load_from_file_insert_docs (mongoc_collection_t *collection,
+                                       const char          *file_name,
+                                       size_t               batch_size)
 {
    int64_t count = 0;
    int fd;
@@ -145,7 +150,9 @@ collection_load_from_file_insert_docs (mongoc_collection_t *collection, const ch
 }
 
 int64_t
-collection_load_from_file_bulk_insert (mongoc_collection_t *collection, const char *file_name, size_t batch_size)
+collection_load_from_file_bulk_insert (mongoc_collection_t *collection,
+                                       const char          *file_name,
+                                       size_t               batch_size)
 {
    int64_t count = 0;
    int fd;
@@ -185,7 +192,8 @@ collection_load_from_file_bulk_insert (mongoc_collection_t *collection, const ch
    return ret ? count : -1;
 }
 
-void execute (mongoc_database_t *db, mongoc_collection_t *collection)
+void execute (mongoc_database_t   *db,
+              mongoc_collection_t *collection)
 {
    double start_time;
    int64_t count;
@@ -207,7 +215,7 @@ void execute (mongoc_database_t *db, mongoc_collection_t *collection)
 }
 
 int
-main (int argc,
+main (int   argc,
       char *argv[])
 {
    const char *default_uristr = "mongodb://localhost/test";

@@ -253,8 +253,8 @@ log_local_handler (mongoc_log_level_t  log_level,
 }
 
 int
-main (int argc,
-      char **argv)
+main (int   argc,
+      char *argv[])
 {
    const char *default_uristr = "mongodb://localhost/test";
    char *uristr;
@@ -264,7 +264,7 @@ main (int argc,
    mongoc_database_t *db;
 
    mongoc_init ();
-   mongoc_log_set_handler(log_local_handler, NULL);
+   mongoc_log_set_handler (log_local_handler, NULL);
 
    uristr = getenv ("MONGODB_URI");
    uristr = uristr ? uristr : (char*)default_uristr;
