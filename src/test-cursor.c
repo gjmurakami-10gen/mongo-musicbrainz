@@ -36,14 +36,16 @@ mongoc_cursor_dump (mongoc_cursor_t *cursor)
 {
    int64_t count = 0;
    const bson_t *doc;
+   bson_error_t error;
+
    while (mongoc_cursor_next (cursor, &doc)) {
       const char *str;
+
       str = bson_as_json (doc, NULL);
       printf ("%s\n", str);
       bson_free ((void*)str);
       ++count;
    }
-   bson_error_t error;
    if (mongoc_cursor_error (cursor, &error)) {
       fprintf (stderr, "Cursor failure: %s\n", error.message);
    }
@@ -54,14 +56,18 @@ void test_suite (mongoc_database_t *db, mongoc_collection_t *collection)
 {
    bson_error_t error;
    bson_t query = BSON_INITIALIZER;
-   int64_t count = mongoc_collection_count (collection, MONGOC_QUERY_NONE, &query, 0, 0, NULL, &error);
-   printf ("mongoc_collection_count count: %lld\n", count);
-   double start_time = dtimeofday ();
-   mongoc_cursor_t *cursor = mongoc_collection_find (collection, MONGOC_QUERY_NONE, 0, 0, 0, &query, NULL, NULL);
+   int64_t count;
+   double start_time, end_time, delta_time;
+   mongoc_cursor_t *cursor;
+
+   count = mongoc_collection_count (collection, MONGOC_QUERY_NONE, &query, 0, 0, NULL, &error);
+   printf ("mongoc_collection_count count: %"PRId64"\n", count);
+   start_time = dtimeofday ();
+   cursor = mongoc_collection_find (collection, MONGOC_QUERY_NONE, 0, 0, 0, &query, NULL, NULL);
    count = mongoc_cursor_dump (cursor);
-   double end_time = dtimeofday ();
-   double delta_time = end_time - start_time + 0.0000001;
-   printf ("mongoc_cursor_insert: secs: %.2f, count: %lld, %.2f docs/sec\n", delta_time, count, count/delta_time);
+   end_time = dtimeofday ();
+   delta_time = end_time - start_time + 0.0000001;
+   printf ("mongoc_cursor_insert: secs: %.2f, count: %"PRId64", %.2f docs/sec\n", delta_time, count, count/delta_time);
 }
 
 int

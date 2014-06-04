@@ -24,9 +24,6 @@
 #include <math.h>
 #include <bcon.h>
 
-long long int
-llround(double x);
-
 #define WARN_ERROR \
     (MONGOC_WARNING ("%s\n", error.message), true);
 
@@ -211,7 +208,7 @@ void execute (mongoc_database_t   *db,
    count = collection_load_from_file_bulk_insert (collection, "../twitter.bson", 1000);
    end_time = dtimeofday ();
    delta_time = end_time - start_time + 0.0000001;
-   printf ("secs: %.2f, count: %lld, %lld docs/sec\n", delta_time, count, llround (count/delta_time));
+   printf ("secs: %.2f, count: %"PRId64", %"PRId64" docs/sec\n", delta_time, count, (int64_t)round (count/delta_time));
 }
 
 int

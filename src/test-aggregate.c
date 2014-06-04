@@ -64,7 +64,7 @@ void test_suite (mongoc_database_t   *db,
    mongoc_cursor_t *cursor;
 
    count = mongoc_collection_count (collection, MONGOC_QUERY_NONE, &query, 0, 0, NULL, &error);
-   printf ("mongoc_collection_count count: %lld\n", count);
+   printf ("mongoc_collection_count count: %"PRId64"\n", count);
    options = BCON_NEW ("cursor", "{", "}", "allowDiskUse", BCON_BOOL (1));
    pipeline = BCON_NEW (
       "pipeline", "[",
@@ -84,7 +84,7 @@ void test_suite (mongoc_database_t   *db,
    count = mongoc_cursor_dump (cursor);
    end_time = dtimeofday ();
    delta_time = end_time - start_time + 0.0000001;
-   printf ("mongoc_cursor_dump: secs: %.2f, count: %lld, %.2f docs/sec\n", delta_time, count, count/delta_time);
+   printf ("mongoc_cursor_dump: secs: %.2f, count: %"PRId64", %.2f docs/sec\n", delta_time, count, count/delta_time);
 }
 
 int
