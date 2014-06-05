@@ -83,7 +83,21 @@
         {
           "column_name": "name",
           "data_type": "VARCHAR(255)",
-          "column_constraint": "NOT NULL\n"
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references area_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
         }
       ]
     }
@@ -104,11 +118,6 @@
         },
         {
           "column_name": "name",
-          "data_type": "VARCHAR",
-          "column_constraint": "NOT NULL"
-        },
-        {
-          "column_name": "sort_name",
           "data_type": "VARCHAR",
           "column_constraint": "NOT NULL"
         },
@@ -200,7 +209,21 @@
         {
           "column_name": "name",
           "data_type": "TEXT",
-          "column_constraint": "NOT NULL\n"
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references area_alias_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
         }
       ]
     }
@@ -439,7 +462,21 @@
         {
           "column_name": "name",
           "data_type": "TEXT",
-          "column_constraint": "NOT NULL\n"
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references artist_alias_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
         }
       ]
     }
@@ -802,7 +839,21 @@
         {
           "column_name": "name",
           "data_type": "VARCHAR(255)",
-          "column_constraint": "NOT NULL\n"
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references artist_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
         }
       ]
     }
@@ -1150,6 +1201,25 @@
   },
   {
     "create_table": {
+      "table_name": "edit_instrument",
+      "columns": [
+        {
+          "column_name": "edit",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references edit.id\n    "
+        },
+        {
+          "column_name": "instrument",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL  ",
+          "comment": "-- PK, references instrument.id CASCADE\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
       "table_name": "edit_label",
       "columns": [
         {
@@ -1245,6 +1315,25 @@
           "data_type": "INTEGER",
           "column_constraint": "NOT NULL  ",
           "comment": "-- PK, references recording.id CASCADE\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "edit_series",
+      "columns": [
+        {
+          "column_name": "edit",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references edit.id\n    "
+        },
+        {
+          "column_name": "series",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL  ",
+          "comment": "-- PK, references series.id CASCADE\n"
         }
       ]
     }
@@ -1639,6 +1728,60 @@
   },
   {
     "create_table": {
+      "table_name": "editor_subscribe_series",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references editor.id\n    "
+        },
+        {
+          "column_name": "series",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references series.id\n    "
+        },
+        {
+          "column_name": "last_edit_sent",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- references edit.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "editor_subscribe_series_deleted",
+      "columns": [
+        {
+          "column_name": "editor",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references editor.id\n    "
+        },
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references series_deletion.gid\n    "
+        },
+        {
+          "column_name": "deleted_by",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- references edit.id\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
       "table_name": "gender",
       "columns": [
         {
@@ -1648,7 +1791,254 @@
         {
           "column_name": "name",
           "data_type": "VARCHAR(255)",
-          "column_constraint": "NOT NULL\n"
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references gender.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "instrument_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references instrument_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "instrument",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "gid",
+          "data_type": "uuid",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "type",
+          "data_type": "INTEGER",
+          "comment": "-- references instrument_type.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >=0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "comment",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL DEFAULT ''"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL DEFAULT ''\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "instrument_gid_redirect",
+      "columns": [
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "new_id",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references instrument.id\n    "
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "instrument_alias_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL",
+          "comment": "-- PK,\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references instrument_alias_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "instrument_alias",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL",
+          "comment": "--PK\n    "
+        },
+        {
+          "column_name": "instrument",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references instrument.id\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "locale",
+          "data_type": "TEXT"
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >=0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "type",
+          "data_type": "INTEGER",
+          "comment": "-- references instrument_alias_type.id\n    "
+        },
+        {
+          "column_name": "sort_name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "begin_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "primary_for_locale",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT false"
+        },
+        {
+          "column_name": "ended",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT FALSE\n      CHECK (\n        (\n          -- If any end date fields are not null, then ended must be true\n          (end_date_year IS NOT NULL OR\n           end_date_month IS NOT NULL OR\n           end_date_day IS NOT NULL) AND\n          ended = TRUE\n        ) OR (\n          -- Otherwise, all end date fields must be null\n          (end_date_year IS NULL AND\n           end_date_month IS NULL AND\n           end_date_day IS NULL)\n        )\n      )"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "instrument_annotation",
+      "columns": [
+        {
+          "column_name": "instrument",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references instrument.id\n    "
+        },
+        {
+          "column_name": "annotation",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references annotation.id\n"
         }
       ]
     }
@@ -1814,7 +2204,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -1853,7 +2248,56 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_area_instrument",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references instrument.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -1892,7 +2336,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -1931,7 +2380,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -1970,7 +2424,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2009,7 +2468,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2048,7 +2512,56 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_area_series",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references area.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references series.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2087,7 +2600,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2126,7 +2644,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2165,7 +2688,56 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_artist_instrument",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references instrument.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2204,7 +2776,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2243,7 +2820,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2282,7 +2864,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2321,7 +2908,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2360,7 +2952,56 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_artist_series",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references artist.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references series.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2399,7 +3040,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2438,7 +3084,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2477,7 +3128,408 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_instrument_instrument",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references instrument.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references instrument.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_instrument_label",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references instrument.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references label.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_instrument_place",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references instrument.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references place.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_instrument_recording",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references instrument.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references recording.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_instrument_release",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references instrument.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_instrument_release_group",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references instrument.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release_group.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_instrument_series",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references instrument.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references series.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_instrument_url",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references instrument.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references url.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_instrument_work",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references instrument.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references work.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2516,7 +3568,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2555,7 +3612,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2594,7 +3656,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2633,7 +3700,56 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_label_series",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references label.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references series.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2672,7 +3788,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2711,7 +3832,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2750,7 +3876,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2789,7 +3920,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2828,7 +3964,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2867,7 +4008,56 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_place_series",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references place.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references series.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2906,7 +4096,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2945,7 +4140,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -2984,7 +4184,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -3023,7 +4228,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -3062,7 +4272,56 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_recording_series",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references recording.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references series.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -3101,7 +4360,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -3140,7 +4404,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -3179,7 +4448,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -3218,7 +4492,56 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_release_series",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references series.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -3257,7 +4580,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -3296,7 +4624,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -3335,7 +4668,56 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_release_group_series",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references release_group.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references series.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -3374,7 +4756,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -3413,7 +4800,144 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_series_series",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references series.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references series.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_series_url",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references series.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references url.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "l_series_work",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "link",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link.id\n    "
+        },
+        {
+          "column_name": "entity0",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references series.id\n    "
+        },
+        {
+          "column_name": "entity1",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references work.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -3452,7 +4976,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -3491,7 +5020,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -3530,7 +5064,12 @@
         {
           "column_name": "last_updated",
           "data_type": "TIMESTAMP",
-          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "link_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (link_order >= 0)\n"
         }
       ]
     }
@@ -3550,11 +5089,6 @@
         },
         {
           "column_name": "name",
-          "data_type": "VARCHAR",
-          "column_constraint": "NOT NULL"
-        },
-        {
-          "column_name": "sort_name",
           "data_type": "VARCHAR",
           "column_constraint": "NOT NULL"
         },
@@ -3708,7 +5242,21 @@
         {
           "column_name": "name",
           "data_type": "TEXT",
-          "column_constraint": "NOT NULL\n"
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references label_alias_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
         }
       ]
     }
@@ -3956,7 +5504,21 @@
         {
           "column_name": "name",
           "data_type": "VARCHAR(255)",
-          "column_constraint": "NOT NULL\n"
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references label_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
         }
       ]
     }
@@ -4170,6 +5732,43 @@
   },
   {
     "create_table": {
+      "table_name": "link_text_attribute_type",
+      "columns": [
+        {
+          "column_name": "attribute_type",
+          "data_type": "INT",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references link_attribute_type.id CASCADE\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "link_attribute_text_value",
+      "columns": [
+        {
+          "column_name": "link",
+          "data_type": "INT",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references link.id\n    "
+        },
+        {
+          "column_name": "attribute_type",
+          "data_type": "INT",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references link_text_attribute_type.attribute_type\n    "
+        },
+        {
+          "column_name": "text_value",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
       "table_name": "link_type",
       "columns": [
         {
@@ -4238,7 +5837,22 @@
         {
           "column_name": "is_deprecated",
           "data_type": "BOOLEAN",
-          "column_constraint": "NOT NULL DEFAULT false\n"
+          "column_constraint": "NOT NULL DEFAULT false"
+        },
+        {
+          "column_name": "has_dates",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT true"
+        },
+        {
+          "column_name": "entity0_cardinality",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "entity1_cardinality",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0\n"
         }
       ]
     }
@@ -4362,14 +5976,6 @@
         {
           "column_name": "access_token",
           "data_type": "TEXT"
-        },
-        {
-          "column_name": "mac_key",
-          "data_type": "TEXT"
-        },
-        {
-          "column_name": "mac_time_diff",
-          "data_type": "INTEGER"
         },
         {
           "column_name": "expire_time",
@@ -4583,7 +6189,29 @@
         {
           "column_name": "has_discids",
           "data_type": "BOOLEAN",
-          "column_constraint": "NOT NULL DEFAULT FALSE\n"
+          "column_constraint": "NOT NULL DEFAULT FALSE"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "orderable_link_type",
+      "columns": [
+        {
+          "column_name": "link_type",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references link_type.id\n    "
+        },
+        {
+          "column_name": "direction",
+          "data_type": "SMALLINT",
+          "column_constraint": "NOT NULL DEFAULT 1 CHECK (direction = 1 OR direction = 2)\n"
         }
       ]
     }
@@ -4764,7 +6392,21 @@
         {
           "column_name": "name",
           "data_type": "TEXT",
-          "column_constraint": "NOT NULL\n"
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references place_alias_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
         }
       ]
     }
@@ -4878,7 +6520,21 @@
         {
           "column_name": "name",
           "data_type": "VARCHAR(255)",
-          "column_constraint": "NOT NULL\n"
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references place_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
         }
       ]
     }
@@ -5473,7 +7129,21 @@
         {
           "column_name": "name",
           "data_type": "VARCHAR(255)",
-          "column_constraint": "NOT NULL\n"
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references release_packaging.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
         }
       ]
     }
@@ -5489,7 +7159,21 @@
         {
           "column_name": "name",
           "data_type": "VARCHAR(255)",
-          "column_constraint": "NOT NULL\n"
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references release_status.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
         }
       ]
     }
@@ -5741,7 +7425,21 @@
         {
           "column_name": "name",
           "data_type": "VARCHAR(255)",
-          "column_constraint": "NOT NULL\n"
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references release_group_primary_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
         }
       ]
     }
@@ -5759,7 +7457,21 @@
         {
           "column_name": "name",
           "data_type": "TEXT",
-          "column_constraint": "NOT NULL\n"
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references release_group_secondary_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
         }
       ]
     }
@@ -5823,28 +7535,302 @@
   },
   {
     "create_table": {
-      "table_name": "script_language",
+      "table_name": "series",
       "columns": [
         {
           "column_name": "id",
           "data_type": "SERIAL"
         },
         {
-          "column_name": "script",
-          "data_type": "INTEGER",
-          "column_constraint": "NOT NULL",
-          "comment": "-- references script.id\n    "
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL"
         },
         {
-          "column_name": "language",
-          "data_type": "INTEGER",
-          "column_constraint": "NOT NULL",
-          "comment": "-- references language.id\n    "
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
         },
         {
-          "column_name": "frequency",
+          "column_name": "comment",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL DEFAULT ''"
+        },
+        {
+          "column_name": "type",
           "data_type": "INTEGER",
-          "column_constraint": "NOT NULL DEFAULT 0\n"
+          "column_constraint": "NOT NULL",
+          "comment": "-- references series_type.id\n    "
+        },
+        {
+          "column_name": "ordering_attribute",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references link_text_attribute_type.attribute_type\n    "
+        },
+        {
+          "column_name": "ordering_type",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references series_ordering_type.id\n    "
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "series_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "entity_type",
+          "data_type": "VARCHAR(50)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references series_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "series_ordering_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL"
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR(255)",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references series_ordering_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "series_deletion",
+      "columns": [
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "last_known_name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "last_known_comment",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "deleted_at",
+          "data_type": "timestamptz",
+          "column_constraint": "NOT NULL DEFAULT now()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "series_gid_redirect",
+      "columns": [
+        {
+          "column_name": "gid",
+          "data_type": "UUID",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "new_id",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references series.id\n    "
+        },
+        {
+          "column_name": "created",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()\n"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "series_alias_type",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "TEXT",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references series_alias_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "series_alias",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "SERIAL",
+          "comment": "-- PK\n    "
+        },
+        {
+          "column_name": "series",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- references series.id\n    "
+        },
+        {
+          "column_name": "name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "locale",
+          "data_type": "TEXT"
+        },
+        {
+          "column_name": "edits_pending",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0 CHECK (edits_pending >= 0)"
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "TIMESTAMP",
+          "column_constraint": "WITH TIME ZONE DEFAULT NOW()"
+        },
+        {
+          "column_name": "type",
+          "data_type": "INTEGER",
+          "comment": "-- references series_alias_type.id\n    "
+        },
+        {
+          "column_name": "sort_name",
+          "data_type": "VARCHAR",
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "begin_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "begin_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_year",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_month",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "end_date_day",
+          "data_type": "SMALLINT"
+        },
+        {
+          "column_name": "primary_for_locale",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT FALSE"
+        },
+        {
+          "column_name": "ended",
+          "data_type": "BOOLEAN",
+          "column_constraint": "NOT NULL DEFAULT FALSE\n      CHECK (\n        (\n          -- If any end date fields are not null, then ended must be true\n          (end_date_year IS NOT NULL OR\n           end_date_month IS NOT NULL OR\n           end_date_day IS NOT NULL) AND\n          ended = TRUE\n        ) OR (\n          -- Otherwise, all end date fields must be null\n          (end_date_year IS NULL AND\n           end_date_month IS NULL AND\n           end_date_day IS NULL)\n        )\n      )"
+        }
+      ]
+    }
+  },
+  {
+    "create_table": {
+      "table_name": "series_annotation",
+      "columns": [
+        {
+          "column_name": "series",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL",
+          "comment": "-- PK, references series.id\n    "
+        },
+        {
+          "column_name": "annotation",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL ",
+          "comment": "-- PK, references annotation.id\n"
         }
       ]
     }
@@ -6234,7 +8220,21 @@
         {
           "column_name": "name",
           "data_type": "TEXT",
-          "column_constraint": "NOT NULL\n"
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references work_alias_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
         }
       ]
     }
@@ -6424,7 +8424,21 @@
         {
           "column_name": "name",
           "data_type": "VARCHAR(255)",
-          "column_constraint": "NOT NULL\n"
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references work_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
         }
       ]
     }
@@ -6451,7 +8465,21 @@
         {
           "column_name": "free_text",
           "data_type": "BOOLEAN",
-          "column_constraint": "NOT NULL\n"
+          "column_constraint": "NOT NULL"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references work_attribute_type.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
+          "data_type": "TEXT"
         }
       ]
     }
@@ -6473,6 +8501,20 @@
         },
         {
           "column_name": "value",
+          "data_type": "TEXT"
+        },
+        {
+          "column_name": "parent",
+          "data_type": "INTEGER",
+          "comment": "-- references work_attribute_type_allowed_value.id\n    "
+        },
+        {
+          "column_name": "child_order",
+          "data_type": "INTEGER",
+          "column_constraint": "NOT NULL DEFAULT 0"
+        },
+        {
+          "column_name": "description",
           "data_type": "TEXT"
         }
       ]

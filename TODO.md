@@ -1,8 +1,7 @@
 # TO DO
 
 * mongomerge - C language version
-  * valgrind
-  * MONGOMERGE = 'src/mongomerge' #'script/merge_agg.rb'
+  * bson_new_from_iter_array, bson_append_iter
   * measure
   * profiling
   * documentation

@@ -99,7 +99,6 @@ def load_table(db, name, options)
   real = 0.0
   file = File.open(file_name)
   file.each_slice(slice_size) do |lines|
-    count += lines.count
     tms = Benchmark.measure do
       docs = lines.collect do |line|
         values = line.chomp.split(/\t/, -1)
@@ -108,9 +107,15 @@ def load_table(db, name, options)
           key = column.first #column['column_name']
           key = '_id' if key == 'id'
           transform = column.last #column['transform']
-          value = transform.call(value) if transform
+          begin
+            value = transform.call(value) if transform
+          rescue => ex
+            raise ({'name' => name, 'count' => count, 'line' => line,
+                    'key' => key, 'value' => value, 'exception' => ex}.inspect)
+          end
           [key, value]
         end
+        count += 1
         Hash[*doc.flatten(1)]
       end
       collection.insert(docs)

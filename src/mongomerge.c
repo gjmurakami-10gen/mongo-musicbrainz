@@ -59,6 +59,9 @@ bson_new_from_iter_array (bson_iter_t *iter)
    while (bson_iter_next (&iter_array)) {
       bson_t *bson_sub;
 
+      /*
+      bson_append_iter (bson, NULL, -1, &iter_array);
+      */
       bson_sub = bson_new_from_iter_document (&iter_array);
       bson_append_document (bson, bson_iter_key (&iter_array), -1, bson_sub) || DIE;
       bson_destroy (bson_sub);
@@ -346,13 +349,13 @@ agg_copy (mongoc_collection_t *source_coll,
 
    options = BCON_NEW ("cursor", "{", "}", "allowDiskUse", BCON_BOOL (1));
    cursor = mongoc_collection_aggregate (source_coll, MONGOC_QUERY_NONE, pipeline, options, NULL);
+   bson_destroy (options);
    /*
    count = mongoc_cursor_insert (cursor, dest_coll, NULL, &error);
    count = mongoc_cursor_insert_batch (cursor, dest_coll, NULL, &error, INSERT_BATCH_SIZE);
    */
    count = mongoc_cursor_bulk_insert (cursor, dest_coll, NULL, &error, BULK_OPS_SIZE);
    mongoc_cursor_destroy (cursor);
-   bson_destroy (options);
    return count;
 }
 
@@ -371,13 +374,19 @@ group_and_update (mongoc_collection_t *source_coll,
    size_t n_docs = 0;
    mongoc_bulk_operation_t *bulk;
    bson_t reply;
+   bson_t q, fields, u;
 
    options = BCON_NEW ("cursor", "{", "}", "allowDiskUse", BCON_BOOL (1));
    pipeline = BCON_NEW ("pipeline", "[", "{", "$group", "{", "_id", "$parent_id", BCON (accumulators), "}", "}", "]");
    cursor = mongoc_collection_aggregate (source_coll, MONGOC_QUERY_NONE, pipeline, options, NULL);
+   bson_destroy (options);
+   bson_destroy (pipeline);
    bulk = mongoc_collection_create_bulk_operation (dest_coll, true, NULL);
+
+   bson_init (&q);
+   bson_init (&fields);
+   bson_init (&u);
    while (ret && mongoc_cursor_next (cursor, &doc)) {
-      bson_t q, fields, *u;
       bson_iter_t iter, iter_ary;
       bool do_update = false;
 
@@ -393,13 +402,13 @@ group_and_update (mongoc_collection_t *source_coll,
          bson_append_iter (&fields, NULL, -1, &iter);
          do_update = true;
       }
-      u = BCON_NEW ("$set", BCON_DOCUMENT (&fields));
+      BCON_APPEND (&u, "$set", BCON_DOCUMENT (&fields));
       /*
       if (do_update)
          ret = mongoc_collection_update (dest_coll, MONGOC_UPDATE_NONE, &q, u, NULL, &error);
       */
       if (do_update) {
-         mongoc_bulk_operation_update_one (bulk, &q, u, false);
+         mongoc_bulk_operation_update_one (bulk, &q, &u, false);
          if (++n_docs == BULK_OPS_SIZE) {
             ret = mongoc_bulk_operation_execute (bulk, &reply, &error);
             if (ret)
@@ -411,9 +420,9 @@ group_and_update (mongoc_collection_t *source_coll,
             bulk = mongoc_collection_create_bulk_operation (dest_coll, true, NULL);
          }
       }
-      bson_destroy (&q);
-      bson_destroy (&fields);
-      bson_destroy (u);
+      bson_reinit (&q);
+      bson_reinit (&fields);
+      bson_reinit (&u);
       if (!ret)
          fprintf (stderr, "mongoc_collection_update failure: %s\n", (char*)&error.message);
       else
@@ -430,10 +439,11 @@ group_and_update (mongoc_collection_t *source_coll,
       fprintf (stderr, "mongoc_cursor_insert failure: %s\n", (char*)&error.message);
       ret = false;
    }
+   bson_destroy (&q);
+   bson_destroy (&fields);
+   bson_destroy (&u);
    mongoc_cursor_destroy (cursor);
    mongoc_bulk_operation_destroy (bulk);
-   bson_destroy (options);
-   bson_destroy (pipeline);
    return ret ? count : -1;
 }
 
