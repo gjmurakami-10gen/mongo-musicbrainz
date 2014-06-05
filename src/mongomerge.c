@@ -355,7 +355,7 @@ agg_copy (mongoc_collection_t *source_coll,
    int64_t count;
    bson_error_t error;
 
-   options = BCON_NEW ("cursor", "{", "}", "allowDiskUse", BCON_BOOL (true));
+   options = BCON_NEW ("allowDiskUse", BCON_BOOL (true));
    cursor = mongoc_collection_aggregate (source_coll, MONGOC_QUERY_NONE, pipeline, options, NULL);
    bson_destroy (options);
    /*
@@ -384,7 +384,7 @@ group_and_update (mongoc_collection_t *source_coll,
    bson_t reply;
    bson_t q, fields, u;
 
-   options = BCON_NEW ("cursor", "{", "}", "allowDiskUse", BCON_BOOL (true));
+   options = BCON_NEW ("allowDiskUse", BCON_BOOL (true));
    pipeline = BCON_NEW ("pipeline", "[", "{", "$group", "{", "_id", "$parent_id", BCON (accumulators), "}", "}", "]");
    cursor = mongoc_collection_aggregate (source_coll, MONGOC_QUERY_NONE, pipeline, options, NULL);
    bson_destroy (options);

@@ -21,6 +21,7 @@
 
 #include <mongoc.h>
 #include <stdio.h>
+#include <math.h>
 #include "mongomerge.h"
 
 void
