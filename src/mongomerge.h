@@ -27,6 +27,9 @@
 
 #define INSERT_BATCH_SIZE 1000
 #define BULK_OPS_SIZE 1000
+#define PROGRESS_SIZE (1000*BULK_OPS_SIZE)
+#define PROGRESS_SIZE_FORMAT "M"
+#define PROGRESS_END_FORMAT ">%zd=%"PRId64
 
 #define WARN_ERROR \
     (MONGOC_WARNING ("%s\n", error.message), true);

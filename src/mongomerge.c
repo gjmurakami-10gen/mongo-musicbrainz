@@ -208,8 +208,13 @@ mongoc_cursor_bulk_insert (mongoc_cursor_t              *cursor,
       mongoc_bulk_operation_insert (bulk, doc);
       if (++n_docs == bulk_ops_size) {
          ret = mongoc_bulk_operation_execute (bulk, &reply, error);
-         if (ret)
+         if (ret) {
             count += n_docs;
+            if (count % PROGRESS_SIZE == 0) {
+               fprintf (stderr, PROGRESS_SIZE_FORMAT, n_docs, count);
+               fflush (stderr);
+            }
+         }
          else
             fprintf (stderr, "mongoc_cursor_bulk_insert execute failure: %s\n", error->message);
          n_docs = 0;
@@ -219,8 +224,11 @@ mongoc_cursor_bulk_insert (mongoc_cursor_t              *cursor,
    }
    if (ret && n_docs > 0) {
       ret = mongoc_bulk_operation_execute (bulk, &reply, error);
-      if (ret)
+      if (ret) {
          count += n_docs;
+         fprintf (stderr, PROGRESS_END_FORMAT, n_docs, count);
+         fflush (stderr);
+      }
       else
          fprintf (stderr, "mongoc_cursor_bulk_insert execute failure: %s\n", error->message);
    }
@@ -347,7 +355,7 @@ agg_copy (mongoc_collection_t *source_coll,
    int64_t count;
    bson_error_t error;
 
-   options = BCON_NEW ("cursor", "{", "}", "allowDiskUse", BCON_BOOL (1));
+   options = BCON_NEW ("cursor", "{", "}", "allowDiskUse", BCON_BOOL (true));
    cursor = mongoc_collection_aggregate (source_coll, MONGOC_QUERY_NONE, pipeline, options, NULL);
    bson_destroy (options);
    /*
@@ -376,7 +384,7 @@ group_and_update (mongoc_collection_t *source_coll,
    bson_t reply;
    bson_t q, fields, u;
 
-   options = BCON_NEW ("cursor", "{", "}", "allowDiskUse", BCON_BOOL (1));
+   options = BCON_NEW ("cursor", "{", "}", "allowDiskUse", BCON_BOOL (true));
    pipeline = BCON_NEW ("pipeline", "[", "{", "$group", "{", "_id", "$parent_id", BCON (accumulators), "}", "}", "]");
    cursor = mongoc_collection_aggregate (source_coll, MONGOC_QUERY_NONE, pipeline, options, NULL);
    bson_destroy (options);
@@ -411,8 +419,13 @@ group_and_update (mongoc_collection_t *source_coll,
          mongoc_bulk_operation_update_one (bulk, &q, &u, false);
          if (++n_docs == BULK_OPS_SIZE) {
             ret = mongoc_bulk_operation_execute (bulk, &reply, &error);
-            if (ret)
+            if (ret) {
                count += n_docs;
+               if (count % PROGRESS_SIZE == 0) {
+                  fprintf (stderr, PROGRESS_SIZE_FORMAT, n_docs, count);
+                  fflush (stderr);
+               }
+            }
             else
                fprintf (stderr, "group_and_update bulk execute failure: %s\n", (char*)&error.message);
             n_docs = 0;
@@ -430,13 +443,16 @@ group_and_update (mongoc_collection_t *source_coll,
    }
    if (ret && n_docs > 0) {
       ret = mongoc_bulk_operation_execute (bulk, &reply, &error);
-      if (ret)
+      if (ret) {
          count += n_docs;
+         fprintf (stderr, PROGRESS_END_FORMAT, n_docs, count);
+         fflush (stderr);
+      }
       else
          fprintf (stderr, "group_and_update bulk execute failure: %s\n", (char*)&error.message);
    }
    if (mongoc_cursor_error (cursor, &error)) {
-      fprintf (stderr, "mongoc_cursor_insert failure: %s\n", (char*)&error.message);
+      fprintf (stderr, "group_and_update failure: %s\n", (char*)&error.message);
       ret = false;
    }
    bson_destroy (&q);
@@ -531,14 +547,15 @@ one_children_append (const char          *parent_name,
       parent_key = bson_iter_next_utf8 (&iter, NULL);
       child_name = bson_iter_next_utf8 (&iter, NULL);
       child_key = bson_iter_next_utf8 (&iter, NULL);
-      /*
-      printf ("info: spec: {type: \"%s\", parent_key: \"%s\", child_name: \"%s\", child_key: \"%s\"}\n",
+      fprintf (stderr, "info: spec: {type: \"%s\", parent_key: \"%s\", child_name: \"%s\", child_key: \"%s\"}\ninfo: child progress: ",
               type, parent_key, child_name, child_key);
-      */
+      fflush (stderr);
       child_coll = mongoc_database_get_collection (db, child_name);
       pipeline = child_by_merge_key (parent_key, child_name, child_key);
       agg_copy (child_coll, temp_one_coll, pipeline);
       bson_destroy (pipeline);
+      fprintf (stderr, "\ninfo: parent progress: ");
+      fflush (stderr);
       pipeline = parent_child_merge_key (parent_key, child_name, child_key);
       agg_copy (parent_coll, temp_one_coll, pipeline);
       bson_destroy (pipeline);
@@ -548,7 +565,11 @@ one_children_append (const char          *parent_name,
       BCON_APPEND (one_accumulators, parent_key, "{", "$max", dollar_parent_key, "}");
       BCON_APPEND (one_projectors, parent_key, dollar_parent_key);
       bson_free ((void*)dollar_parent_key);
+      fprintf (stderr, "\n");
+      fflush (stderr);
    }
+   fprintf (stderr, "info: merge_one_all progress: ", parent_name);
+   fflush (stderr);
    pipeline = merge_one_all (one_accumulators, one_projectors);
    agg_copy (temp_one_coll, temp_coll, pipeline);
    bson_destroy (pipeline);
@@ -556,6 +577,8 @@ one_children_append (const char          *parent_name,
    bson_destroy (one_projectors);
    mongoc_collection_drop (temp_one_coll, &error);
    mongoc_collection_destroy (temp_one_coll);
+   fprintf (stderr, "\n");
+   fflush (stderr);
 }
 
 void
@@ -581,10 +604,9 @@ many_children_append (const char         *parent_name,
       parent_key = bson_iter_next_utf8 (&iter, NULL);
       child_name = bson_iter_next_utf8 (&iter, NULL);
       child_key = bson_iter_next_utf8 (&iter, NULL);
-      /*
-      printf ("info: spec: {type: \"%s\", parent_key: \"%s\", child_name: \"%s\", child_key: \"%s\"}\n",
+      fprintf (stderr, "info: spec: {type: \"%s\", parent_key: \"%s\", child_name: \"%s\", child_key: \"%s\"}\ninfo: child progress: ",
               type, parent_key, child_name, child_key);
-      */
+      fflush (stderr);
       child_coll = mongoc_database_get_collection (db, child_name);
       pipeline = copy_many_with_parent_id (parent_key, child_name, child_key);
       agg_copy (child_coll, temp_coll, pipeline);
@@ -593,6 +615,8 @@ many_children_append (const char         *parent_name,
       dollar_parent_key = str_compose ("$", parent_key);
       BCON_APPEND (all_accumulators, parent_key, "{", "$push", dollar_parent_key, "}");
       bson_free ((void*)dollar_parent_key);
+      fprintf (stderr, "\n");
+      fflush (stderr);
    }
 }
 
@@ -634,7 +658,11 @@ execute (const char *parent_name,
 
    many_children_append (parent_name, &iter_spec_top, db, temp_coll, all_accumulators);
 
+   fprintf (stderr, "info: group progress: ", parent_name);
+   fflush (stderr);
    count = group_and_update (temp_coll, parent_coll, all_accumulators);
+   fprintf (stderr, "\n");
+   fflush (stderr);
 
    bson_destroy (all_accumulators);
    bson_destroy (bson_spec);

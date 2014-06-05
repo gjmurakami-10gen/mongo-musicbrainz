@@ -1,7 +1,7 @@
 CMDS = mongomerge
 TESTS = test-aggregate test-cursor test-mongoload test-mongomerge
 
-WARNINGS = -std=c89 -Wall -Wno-deprecated-declarations -Wdeclaration-after-statement
+WARNINGS = -std=c89 -Wall -Wno-deprecated-declarations -Wno-format-extra-args -Wdeclaration-after-statement
 DEBUG = -ggdb
 OPTIMIZE = -O2 -mtune=native
 

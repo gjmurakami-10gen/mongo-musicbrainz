@@ -88,6 +88,7 @@ task :default do
   EOF
 end
 
+desc "fetch_all"
 task :fetch_all do
   log_file_name = 'rake_fetch_all.log'
   sh "date > #{log_file_name}"
@@ -99,6 +100,7 @@ task :fetch_all do
   sh "date >> #{log_file_name}"
 end
 
+desc "db_all"
 task :db_all do
   log_file_name = 'rake_db_all.log'
   sh "date > #{log_file_name}"

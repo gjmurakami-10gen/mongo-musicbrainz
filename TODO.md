@@ -1,6 +1,8 @@
 # TO DO
 
 * mongomerge - C language version
+  * skip merge_one_all if no one merges
+  * size_t n_docs printf format
   * bson_new_from_iter_array, bson_append_iter
   * measure
   * profiling
