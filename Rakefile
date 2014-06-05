@@ -55,14 +55,14 @@ end
 FETCH_TASKS = %w[
     latest
     fetch
-    unarchive
     cutover
-    metrics:wc_all
-    metrics:wc_core
-    references
 ]
 
 DB_TASKS = %w[
+    unarchive
+    metrics:wc_all
+    metrics:wc_core
+    references
     mongo:start
     mongo:status
     load_tables

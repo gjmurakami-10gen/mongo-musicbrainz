@@ -39,8 +39,8 @@ end
 
 BASE_DIR = File.expand_path('../..', __FILE__)
 FULLEXPORT_DIR = "#{BASE_DIR}/ftp.musicbrainz.org/pub/musicbrainz/data/fullexport"
-LATEST = "#{FULLEXPORT_DIR}/LATEST"
-MBDUMP_DIR = "#{BASE_DIR}/data/fullexport/#{file_to_s(LATEST)}/mbdump"
+LATEST_FILE = "#{FULLEXPORT_DIR}/LATEST"
+MBDUMP_DIR = "#{BASE_DIR}/data/fullexport/#{file_to_s(LATEST_FILE)}/mbdump"
 SCHEMA_FILE = "#{BASE_DIR}/schema/create_tables.json"
 MONGO_DBNAME = "musicbrainz"
 

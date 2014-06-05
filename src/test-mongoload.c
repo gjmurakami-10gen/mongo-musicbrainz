@@ -22,7 +22,6 @@
 #include <mongoc.h>
 #include <stdio.h>
 #include <math.h>
-#include <bcon.h>
 
 #define WARN_ERROR \
     (MONGOC_WARNING ("%s\n", error.message), true);

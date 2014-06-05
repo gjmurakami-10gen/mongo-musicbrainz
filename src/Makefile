@@ -1,4 +1,4 @@
-CMDS = mongomerge
+CMDS = mbdump_to_mongo mongomerge
 TESTS = test-aggregate test-cursor test-mongoload test-mongomerge
 
 WARNINGS = -std=c89 -Wall -Wno-deprecated-declarations -Wno-format-extra-args -Wdeclaration-after-statement
@@ -11,9 +11,12 @@ LIBS = $(shell pkg-config --libs libmongoc-1.0) -lm
 default: test
 
 test: all
-	MONGODB_URI='mongodb://localhost/test' $$VALGRIND ./test-mongomerge
+	MONGODB_URI='mongodb://localhost/test' $$VALGRIND ./mbdump_to_mongo area
 
 all: $(CMDS) $(TESTS)
+
+mbdump_to_mongo: mbdump_to_mongo.o
+	$(CC) -o $@ $(WARNINGS) $(DEBUG) $(OPTIMIZE) $(CFLAGS) $^ $(LIBS)
 
 mongomerge: mongomerge.o mongomerge_main.o
 	$(CC) -o $@ $(WARNINGS) $(DEBUG) $(OPTIMIZE) $(CFLAGS) $^ $(LIBS)

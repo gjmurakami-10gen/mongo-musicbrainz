@@ -23,7 +23,6 @@
 #define MONGOMERGE_H
 #include <mongoc.h>
 #include <stdio.h>
-#include <bcon.h>
 
 #define INSERT_BATCH_SIZE 1000
 #define BULK_OPS_SIZE 1000

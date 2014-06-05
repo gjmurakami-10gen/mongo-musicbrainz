@@ -22,7 +22,6 @@
 #include <mongoc.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <bcon.h>
 
 double
 dtimeofday () {
