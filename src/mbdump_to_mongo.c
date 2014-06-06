@@ -160,8 +160,8 @@ set_paths (char *argv[])
 }
 
 bool
-bson_find_create_table (bson_t *bson_schema,
-                        const char *table_name,
+bson_find_create_table (bson_t      *bson_schema,
+                        const char  *table_name,
                         bson_iter_t *iter_col)
 {
     bson_iter_t iter_json, iter_ary, iter_sql, iter_table_prop;
@@ -194,7 +194,7 @@ bson_append_utf8_from_s (bson_t     *bson,
 {
     bool ret = true;
 
-    if (value)
+    if (value && *value)
         ret = BSON_APPEND_UTF8 (bson, key, value);
     return ret;
 }
@@ -206,8 +206,20 @@ bson_append_int32_from_s (bson_t     *bson,
 {
     bool ret = true;
 
-    if (strcmp("\\N", value) != 0)
+    if (value && strcmp ("\\N", value) != 0)
         ret = BSON_APPEND_INT32 (bson, key, atoi (value));
+    return ret;
+}
+
+bool
+bson_append_double_from_s (bson_t     *bson,
+                          const char *key,
+                          const char *value)
+{
+    bool ret = true;
+
+    if (value && strcmp ("\\N", value) != 0)
+        ret = BSON_APPEND_DOUBLE (bson, key, atof (value));
     return ret;
 }
 
@@ -216,11 +228,19 @@ bson_append_bool_from_s (bson_t     *bson,
                           const char *key,
                           const char *value)
 {
-    strcmp ("t", value) == 0 || strcmp ("f", value) == 0 || DIE;
-    return BSON_APPEND_BOOL (bson, key, (strcmp ("t", value) == 0) ? true : false);
+    bool ret = true;
+
+    if (value && strcmp ("\\N", value) != 0) {
+        strcmp ("t", value) == 0 || strcmp ("f", value) == 0 || DIE;
+        ret = BSON_APPEND_BOOL (bson, key, (strcmp ("t", value) == 0) ? true : false);
+    }
+    return ret;
 }
 
-#define FORMAT_PG_TIMESTAMP_WITH_TIME_ZONE ""
+#define FORMAT_PG_TIMESTAMP_WITH_TIME_ZONE "%F %T.%6d%z"
+#define FORMAT_PG_TIMESTAMP_F_T "%F %T"
+#define FORMAT_PG_TIMESTAMP_USEC ".%6d"
+#define FORMAT_PG_TIMESTAMP_Z "%z"
 
 bool
 pg_timestamp_with_time_zone_from_s (const char     *s,
@@ -229,12 +249,13 @@ pg_timestamp_with_time_zone_from_s (const char     *s,
     struct tm tm;
     char *p;
 
-    p = strptime (s, FORMAT_PG_TIMESTAMP_WITH_TIME_ZONE, &tm);
+    p = strptime (s, FORMAT_PG_TIMESTAMP_F_T, &tm);
+    sscanf (p, FORMAT_PG_TIMESTAMP_USEC, &timeval->tv_usec);
+    p = strptime (p + 7, FORMAT_PG_TIMESTAMP_Z, &tm);
     if (p)
        printf ("WARNING: strptime parsing incomplete\n");
-    timeval->tv_sec = mktime (&tm);
-    timeval->tv_usec = 0; /* pending */
-    return false;
+    timeval->tv_sec = timegm (&tm);
+    return p == NULL;
 }
 
 bool
@@ -243,11 +264,13 @@ bson_append_timeval_from_s (bson_t     *bson,
                                         const char *value)
 {
     struct timeval timeval;
+    bool ret = true;
 
-    timeval.tv_sec = 0;
-    timeval.tv_usec = 0;
-    pg_timestamp_with_time_zone_from_s (value, &timeval);
-    return bson_append_timeval (bson, key, -1, &timeval) && false;
+    if (value && strcmp ("\\N", value) != 0) {
+        ret = pg_timestamp_with_time_zone_from_s (value, &timeval);
+        ret = ret && bson_append_timeval (bson, key, -1, &timeval);
+    }
+    return ret;
 }
 
 bool
@@ -255,8 +278,22 @@ bson_append_int32_array_from_s (bson_t     *bson,
                                 const char *key,
                                 const char *value)
 {
-    /* pending */
-    return false;
+    bool ret = true;
+    bson_t child;
+    char *s, *p;
+
+    if (value && strcmp ("\\N", value) != 0) {
+        s = strdup (value);
+        BSON_APPEND_ARRAY_BEGIN (bson, key, &child);
+        p = strtok (s, "{,}");
+        while (p) {
+            ret = bson_append_int32_from_s (&child, "0", p);
+            p = strtok (NULL, "{,}");
+        }
+        bson_append_array_end (bson, &child);
+        free (s);
+    }
+    return ret;
 }
 
 bool
@@ -264,8 +301,23 @@ bson_append_point_from_s (bson_t     *bson,
                           const char *key,
                           const char *value)
 {
-    /* pending */
-    return false;
+    bool ret = true;
+    bson_t child;
+    char *s, *p;
+
+    if (value && strcmp ("\\N", value) != 0) {
+        s = strdup (value);
+        BSON_APPEND_ARRAY_BEGIN (bson, key, &child);
+        p = strtok (s, "(,)");
+        if (!p) DIE;
+        ret = bson_append_double_from_s (&child, "0", p);
+        p = strtok (NULL, "(,)");
+        if (!p) DIE;
+        ret = ret && bson_append_double_from_s (&child, "1", p);
+        bson_append_array_end (bson, &child);
+        free (s);
+    }
+    return ret;
 }
 
 typedef struct {
@@ -303,6 +355,7 @@ data_type_map_t data_type_map[] = {
 
 typedef struct {
     const char *column_name;
+    const char *data_type;
     bool (*bson_append_from_s) (bson_t *bson, const char *key, const char *value);
 } column_map_t;
 
@@ -335,6 +388,7 @@ get_column_map (bson_t            *bson_schema,
         bson_iter_find (&iter_col_prop, "data_type") || DIE;
         BSON_ITER_HOLDS_UTF8 (&iter_col_prop) || DIE;
         data_type = bson_iter_utf8 (&iter_col_prop, NULL);
+        column_map_p->data_type = data_type;
         for (data_type_map_p = data_type_map;
              data_type_map_p < (data_type_map + sizeof (data_type_map)) &&
              strcmp (data_type_map_p->data_type, data_type) != 0;
@@ -350,7 +404,27 @@ get_column_map (bson_t            *bson_schema,
     return true;
 }
 
-void
+char *
+strtok_single (char       *str,
+               char const *delims)
+{
+    static char *src = NULL;
+    char *ret = NULL;
+    char *p;
+
+    if (str != NULL)
+        src = str;
+    if (src == NULL)
+        return NULL;
+    if ((p = strpbrk (src, delims)) != NULL) {
+        *p  = '\0';
+        ret = src;
+        src = ++p;
+    }
+    return ret;
+}
+
+int64_t
 load_table (mongoc_database_t *db,
             const char        *table_name,
             bson_t            *bson_schema)
@@ -360,6 +434,7 @@ load_table (mongoc_database_t *db,
     FILE *fp;
     char *token;
     bson_t bson;
+    int64_t count = 0;
 
     printf ("load_table table_name: \"%s\"\n", table_name);
     get_column_map (bson_schema, table_name, &column_map, &column_map_size) || DIE;
@@ -367,28 +442,34 @@ load_table (mongoc_database_t *db,
     printf ("mbdump_file: \"%s\"\n", mbdump_file);
     fp = fopen (mbdump_file, "r");
     if (!fp) DIE;
-    fgets (buf, BUFSIZ, fp);
-    fputs (buf, stdout);
-    chomp (buf);
     bson_init (&bson);
-    {
-        for (i = 0, column_map_p = column_map, token = strtok(buf, "\t");
+    while (fgets (buf, BUFSIZ, fp)) {
+        /*
+        fputs (buf, stdout);
+        */
+        chomp (buf);
+        for (i = 0, column_map_p = column_map, token = strtok_single (buf, "\t");
              i < column_map_size;
-             i++, column_map_p++, token = strtok(NULL, "\t")) {
+             i++, column_map_p++, token = strtok_single (NULL, "\t")) {
              bool ret;
-
-             ret = (*column_map_p->bson_append_from_s) (&bson, column_map_p->column_name, token);
-             ret || printf ("WARNING: column_map_p->bson_append_from_s failed column \"%s\": \"%s\"\n", column_map_p->column_name, token);
              /*
-             printf ("%s: \"%s\"\n", column_map_p->column_name, token);
+             printf ("%s: \"%s\" [%d/%d](%s)\n", column_map_p->column_name, token, i, column_map_size, column_map_p->data_type);
+             fflush (stdout);
              */
+             ret = (*column_map_p->bson_append_from_s) (&bson, column_map_p->column_name, token);
+             ret || printf ("WARNING: column_map_p->bson_append_from_s failed column %s: \"%s\" [%d/%d](%s)\n",
+                            column_map_p->column_name, token, i, column_map_size, column_map_p->data_type);
         }
+        /*
         bson_printf ("bson: %s\n", &bson);
+        */
         bson_reinit (&bson);
+        count++;
     }
     bson_destroy (&bson);
     fclose (fp);
     free (column_map);
+    return count;
 }
 
 int64_t
@@ -416,7 +497,7 @@ execute (int   argc,
     bson_init_from_json_file (&bson_schema, schema_file) || WARN_ERROR;
     for (argi = 0; argi < argc; argi++) {
         /* printf ("argv[%d]: \"%s\"\n", argi, argv[argi]); */
-        load_table (db, argv[argi], &bson_schema);
+        count += load_table (db, argv[argi], &bson_schema);
     }
     bson_destroy (&bson_schema);
 
@@ -426,14 +507,74 @@ execute (int   argc,
     return count;
 }
 
-void
-test_suite (void)
+bool
+test_pg_timestamp_with_time_zone_from_s (void)
 {
     struct timeval timeval;
     char *s = "2013-07-21 22:47:57.660809+00";
+    time_t utime;
+    struct tm *tm;
+    char stime_f_t[64], stime_usec_z[64];
 
-    pg_timestamp_with_time_zone_from_s (s, &timeval);
-    printf ("TIMESTAMP: \"%s\", sec:%ld, usec:%ld\n", s, timeval.tv_sec, (long)timeval.tv_usec);
+    pg_timestamp_with_time_zone_from_s (s, &timeval) || DIE;
+    utime = (time_t) timeval.tv_sec;
+    tm = gmtime (&utime);
+    strftime (stime_f_t, 64, FORMAT_PG_TIMESTAMP_F_T, tm);
+    sprintf (stime_usec_z, "%s.%06ld+00", stime_f_t, (long)timeval.tv_usec);
+    if (strcmp (s, stime_usec_z) != 0) {
+        printf ("Test pg_timestamp_with_time_zone_from_s failed, TIMESTAMP: \"%s\", sec:%ld, usec:%ld, strftime: \"%s\"\n",
+                s, timeval.tv_sec, (long)timeval.tv_usec, stime_usec_z);
+        return false;
+    }
+    return true;
+}
+
+bool
+test_bson_append_int32_array_from_s (void)
+{
+    bson_t bson;
+    const char *input = "{150,77950}";
+    const char *expected = "{ \"track_offset\" : [ 150, 77950 ] }";
+    const char *actual;
+
+    bson_init (&bson);
+    bson_append_int32_array_from_s (&bson, "track_offset", input);
+    actual = bson_as_json (&bson, NULL);
+    if (strcmp (expected, actual) != 0) {
+        printf ("Test test_bson_append_int32_array_from_s failed, input: \"%s\", bson expected: \"%s\", bson actual: \"%s\"\n",
+                input, expected, actual);
+        return false;
+    }
+    bson_free ((void*)actual);
+    return true;
+}
+
+bool
+test_bson_append_point_from_s (void)
+{
+    bson_t bson;
+    const char *input = "(35.585673,139.728101)";
+    const char *expected = "{ \"point\" : [ 35.585673, 139.728101 ] }";
+    const char *actual;
+
+    bson_init (&bson);
+    bson_append_point_from_s (&bson, "point", input);
+    actual = bson_as_json (&bson, NULL);
+    if (strcmp (expected, actual) != 0) {
+        printf ("Test test_bson_append_point_from_s failed, input: \"%s\", bson expected: \"%s\", bson actual: \"%s\"\n",
+                input, expected, actual);
+        return false;
+    }
+    bson_free ((void*)actual);
+    return true;
+}
+
+void
+test_suite (void)
+{
+    test_pg_timestamp_with_time_zone_from_s ();
+    test_bson_append_int32_array_from_s ();
+    test_bson_append_point_from_s ();
 }
 
 void
