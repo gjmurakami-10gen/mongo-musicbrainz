@@ -1,5 +1,8 @@
 # TO DO
 
+* mbdump_to_mongo - C language version
+  * pending - pson_append_date_time_from_s
+  * fix memory leaks
 * mongomerge - C language version
   * skip merge_one_all if no one merges
   * size_t n_docs printf format
@@ -7,7 +10,6 @@
   * measure
   * profiling
   * documentation
-* mbdump_to_mongo - C language version
 
 * User Interface
   * reconsider with origin from both AR and MongoDB from scratch

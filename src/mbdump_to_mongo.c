@@ -220,14 +220,34 @@ bson_append_bool_from_s (bson_t     *bson,
     return BSON_APPEND_BOOL (bson, key, (strcmp ("t", value) == 0) ? true : false);
 }
 
+#define FORMAT_PG_TIMESTAMP_WITH_TIME_ZONE ""
+
 bool
-bson_append_date_time_from_s (bson_t     *bson,
-                          const char *key,
-                          const char *value)
+pg_timestamp_with_time_zone_from_s (const char     *s,
+                                    struct timeval *timeval)
 {
-    int64_t date_time;
-    date_time = 0; /* pending */
-    return BSON_APPEND_DATE_TIME (bson, key, date_time) && false;
+    struct tm tm;
+    char *p;
+
+    p = strptime (s, FORMAT_PG_TIMESTAMP_WITH_TIME_ZONE, &tm);
+    if (p)
+       printf ("WARNING: strptime parsing incomplete\n");
+    timeval->tv_sec = mktime (&tm);
+    timeval->tv_usec = 0; /* pending */
+    return false;
+}
+
+bool
+bson_append_timeval_from_s (bson_t     *bson,
+                                        const char *key,
+                                        const char *value)
+{
+    struct timeval timeval;
+
+    timeval.tv_sec = 0;
+    timeval.tv_usec = 0;
+    pg_timestamp_with_time_zone_from_s (value, &timeval);
+    return bson_append_timeval (bson, key, -1, &timeval) && false;
 }
 
 bool
@@ -269,7 +289,7 @@ data_type_map_t data_type_map[] = {
     { "SERIAL",        bson_append_int32_from_s },
     { "SMALLINT",      bson_append_int32_from_s },
     { "TEXT",          NULL },
-    { "TIMESTAMP",     bson_append_date_time_from_s },
+    { "TIMESTAMP",     bson_append_timeval_from_s },
     { "UUID",          NULL },
     { "uuid",          NULL },
     { "VARCHAR",       NULL },
@@ -368,6 +388,7 @@ load_table (mongoc_database_t *db,
     }
     bson_destroy (&bson);
     fclose (fp);
+    free (column_map);
 }
 
 int64_t
@@ -406,6 +427,16 @@ execute (int   argc,
 }
 
 void
+test_suite (void)
+{
+    struct timeval timeval;
+    char *s = "2013-07-21 22:47:57.660809+00";
+
+    pg_timestamp_with_time_zone_from_s (s, &timeval);
+    printf ("TIMESTAMP: \"%s\", sec:%ld, usec:%ld\n", s, timeval.tv_sec, (long)timeval.tv_usec);
+}
+
+void
 log_local_handler (mongoc_log_level_t  log_level,
                    const char         *log_domain,
                    const char         *message,
@@ -439,6 +470,9 @@ main (int   argc,
    if (argc < 2) {
       DIE; /* pending - usage */
    }
+
+   test_suite ();
+
    mongoc_init ();
    mongoc_log_set_handler (log_local_handler, NULL);
 
