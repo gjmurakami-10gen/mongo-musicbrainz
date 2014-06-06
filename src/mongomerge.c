@@ -547,8 +547,8 @@ one_children_append (const char          *parent_name,
       parent_key = bson_iter_next_utf8 (&iter, NULL);
       child_name = bson_iter_next_utf8 (&iter, NULL);
       child_key = bson_iter_next_utf8 (&iter, NULL);
-      fprintf (stderr, "info: spec: {type: \"%s\", parent_key: \"%s\", child_name: \"%s\", child_key: \"%s\"}\ninfo: child progress: ",
-              type, parent_key, child_name, child_key);
+      fprintf (stderr, "info: parent: \"%s\", child spec: {type: \"%s\", parent_key: \"%s\", child_name: \"%s\", child_key: \"%s\"}\ninfo: child progress: ",
+              parent_name, type, parent_key, child_name, child_key);
       fflush (stderr);
       child_coll = mongoc_database_get_collection (db, child_name);
       pipeline = child_by_merge_key (parent_key, child_name, child_key);
@@ -604,8 +604,8 @@ many_children_append (const char         *parent_name,
       parent_key = bson_iter_next_utf8 (&iter, NULL);
       child_name = bson_iter_next_utf8 (&iter, NULL);
       child_key = bson_iter_next_utf8 (&iter, NULL);
-      fprintf (stderr, "info: spec: {type: \"%s\", parent_key: \"%s\", child_name: \"%s\", child_key: \"%s\"}\ninfo: child progress: ",
-              type, parent_key, child_name, child_key);
+      fprintf (stderr, "info: parent: \"%s\", child spec: {type: \"%s\", parent_key: \"%s\", child_name: \"%s\", child_key: \"%s\"}\ninfo: child progress: ",
+              parent_name, type, parent_key, child_name, child_key);
       fflush (stderr);
       child_coll = mongoc_database_get_collection (db, child_name);
       pipeline = copy_many_with_parent_id (parent_key, child_name, child_key);

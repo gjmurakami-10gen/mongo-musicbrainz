@@ -50,7 +50,6 @@ int
 main (int   argc,
       char *argv[])
 {
-   char **argvp;
    char *parent_name;
    double start_time;
    int64_t count;
@@ -63,11 +62,10 @@ main (int   argc,
    mongoc_init ();
    mongoc_log_set_handler (log_local_handler, NULL);
 
-   argvp = argv;
-   parent_name = *argv++;
+   parent_name = argv[1];
 
    start_time = dtimeofday ();
-   count = execute (parent_name, argc - 2, argvp);
+   count = execute (parent_name, argc - 2, &argv[2]);
    end_time = dtimeofday ();
    delta_time = end_time - start_time + 0.0000001;
    fprintf (stderr, "info: real: %.2f, count: %"PRId64", %"PRId64" docs/sec\n", delta_time, count, (int64_t)round (count/delta_time));

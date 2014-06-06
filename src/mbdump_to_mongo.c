@@ -50,15 +50,18 @@ char latest_file[MAXPATHLEN];
 char latest_name[MAXPATHLEN];
 char mbdump_dir[MAXPATHLEN];
 char schema_file[MAXPATHLEN];
+char mbdump_file[MAXPATHLEN];
 
 #define MONGODB_DEFAULT_URI "mongodb://localhost/musicbrainz"
+
+char buf[BUFSIZ];
 
 char *
 realpath_replace (char *file_name)
 {
     char temp_path[MAXPATHLEN];
-    realpath(file_name, temp_path);
-    strcpy(file_name, temp_path);
+    realpath (file_name, temp_path);
+    strcpy (file_name, temp_path);
     return file_name;
 }
 
@@ -67,7 +70,7 @@ dirname_replace (char *file_name)
 {
     char temp_path[MAXPATHLEN];
     snprintf (temp_path, MAXPATHLEN, "%s/../", file_name);
-    strcpy(file_name, temp_path);
+    strcpy (file_name, temp_path);
     realpath_replace (file_name);
     return file_name;
 }
@@ -77,7 +80,7 @@ file_size (FILE * fp)
 {
     struct stat buf;
 
-    fstat (fileno(fp), &buf) == 0 || DIE;
+    fstat (fileno (fp), &buf) == 0 || DIE;
     return buf.st_size;
 }
 
@@ -88,12 +91,13 @@ file_to_s (const char *file_name)
     char *s;
     off_t st_size;
 
-    fp = fopen(file_name, "r");
+    fp = fopen (file_name, "r");
     if (!fp) DIE;
-    st_size = file_size(fp);
+    st_size = file_size (fp);
     s = malloc (st_size + 1);
     fread (s, 1, st_size, fp) || DIE;
     s[st_size] = '\0';
+    fclose (fp);
     return s;
 }
 
@@ -102,7 +106,7 @@ chomp (char *s)
 {
     size_t len;
 
-    len = strlen(s);
+    len = strlen (s);
     if (*s && s[len - 1]=='\n')
         s[len - 1] = '\0';
     return s;
@@ -129,7 +133,7 @@ bson_init_from_json_file (bson_t     *bson,
     bool ret;
 
     json = file_to_s (file_name);
-    len = strlen(json) + 16;
+    len = strlen (json) + 16;
     json_wrapped = malloc (len);
     snprintf (json_wrapped, len, "{\n\"json\": %s\n}\n", json);
     ret = bson_init_from_json (bson, json_wrapped, len, &error) || WARN_ERROR;
@@ -143,22 +147,227 @@ set_paths (char *argv[])
 {
     char *latest_name;
 
-    getcwd(cwd, MAXPATHLEN);
-    snprintf (base_dir, MAXPATHLEN, "%s/%s", cwd, dirname(argv[0]));
-    dirname_replace(base_dir);
+    getcwd (cwd, MAXPATHLEN);
+    snprintf (base_dir, MAXPATHLEN, "%s/%s", cwd, dirname (argv[0]));
+    dirname_replace (base_dir);
     realpath_replace (base_dir);
-    printf ("base_dir: \"%s\"\n", base_dir);
     snprintf (fullexport_dir, MAXPATHLEN, "%s/%s", base_dir, "ftp.musicbrainz.org/pub/musicbrainz/data/fullexport");
-    printf ("fullexport_dir: \"%s\"\n", fullexport_dir);
     snprintf (latest_file, MAXPATHLEN, "%s/%s", fullexport_dir, "LATEST");
-    printf ("latest_file: \"%s\"\n", latest_file);
     latest_name = chomp (file_to_s (latest_file));
-    printf ("latest_name: \"%s\"\n", latest_name);
     snprintf (mbdump_dir, MAXPATHLEN, "%s/data/fullexport/%s/mbdump", base_dir, latest_name);
     free (latest_name);
-    printf ("mbdump_dir: \"%s\"\n", mbdump_dir);
     snprintf (schema_file, MAXPATHLEN, "%s/schema/create_tables.json", base_dir);
-    printf ("schema_file: \"%s\"\n", schema_file);
+}
+
+bool
+bson_find_create_table (bson_t *bson_schema,
+                        const char *table_name,
+                        bson_iter_t *iter_col)
+{
+    bson_iter_t iter_json, iter_ary, iter_sql, iter_table_prop;
+
+    bson_iter_init_find (&iter_json, bson_schema, "json") || DIE;
+    BSON_ITER_HOLDS_ARRAY (&iter_json) || DIE;
+    bson_iter_recurse (&iter_json, &iter_ary) || DIE;
+    while (bson_iter_next (&iter_ary)) {
+        (BSON_ITER_HOLDS_DOCUMENT (&iter_ary) || DIE);
+        bson_iter_recurse (&iter_ary, &iter_sql) || DIE;
+        if (bson_iter_find (&iter_sql, "create_table") &&
+            (BSON_ITER_HOLDS_DOCUMENT (&iter_sql) || DIE) &&
+            (bson_iter_recurse (&iter_sql, &iter_table_prop) || DIE) &&
+            (bson_iter_find (&iter_table_prop, "table_name") || DIE) &&
+            (BSON_ITER_HOLDS_UTF8 (&iter_table_prop) || DIE) &&
+            (strcmp (bson_iter_utf8 (&iter_table_prop, NULL), table_name) == 0) &&
+            (bson_iter_find (&iter_table_prop, "columns") || DIE) &&
+            (BSON_ITER_HOLDS_ARRAY (&iter_table_prop) || DIE)) {
+            bson_iter_recurse (&iter_table_prop, iter_col) || DIE;
+            return true;
+        }
+    }
+    return (false);
+}
+
+bool
+bson_append_utf8_from_s (bson_t     *bson,
+                         const char *key,
+                         const char *value)
+{
+    bool ret = true;
+
+    if (value)
+        ret = BSON_APPEND_UTF8 (bson, key, value);
+    return ret;
+}
+
+bool
+bson_append_int32_from_s (bson_t     *bson,
+                          const char *key,
+                          const char *value)
+{
+    bool ret = true;
+
+    if (strcmp("\\N", value) != 0)
+        ret = BSON_APPEND_INT32 (bson, key, atoi (value));
+    return ret;
+}
+
+bool
+bson_append_bool_from_s (bson_t     *bson,
+                          const char *key,
+                          const char *value)
+{
+    strcmp ("t", value) == 0 || strcmp ("f", value) == 0 || DIE;
+    return BSON_APPEND_BOOL (bson, key, (strcmp ("t", value) == 0) ? true : false);
+}
+
+bool
+bson_append_date_time_from_s (bson_t     *bson,
+                          const char *key,
+                          const char *value)
+{
+    int64_t date_time;
+    date_time = 0; /* pending */
+    return BSON_APPEND_DATE_TIME (bson, key, date_time) && false;
+}
+
+bool
+bson_append_int32_array_from_s (bson_t     *bson,
+                                const char *key,
+                                const char *value)
+{
+    /* pending */
+    return false;
+}
+
+bool
+bson_append_point_from_s (bson_t     *bson,
+                          const char *key,
+                          const char *value)
+{
+    /* pending */
+    return false;
+}
+
+typedef struct {
+    const char *data_type;
+    bool (*bson_append_from_s) (bson_t *bson, const char *key, const char *value);
+} data_type_map_t;
+
+data_type_map_t data_type_map[] = {
+    { "BOOLEAN",       bson_append_bool_from_s },
+    { "CHAR(2)",       NULL },
+    { "CHAR(3)",       NULL },
+    { "CHAR(4)",       NULL },
+    { "CHAR(8)",       NULL },
+    { "CHAR(11)",      NULL },
+    { "CHAR(12)",      NULL },
+    { "CHAR(16)",      NULL },
+    { "CHAR(28)",      NULL },
+    { "CHARACTER(15)", NULL },
+    { "INT",           bson_append_int32_from_s },
+    { "INTEGER",       bson_append_int32_from_s },
+    { "SERIAL",        bson_append_int32_from_s },
+    { "SMALLINT",      bson_append_int32_from_s },
+    { "TEXT",          NULL },
+    { "TIMESTAMP",     bson_append_date_time_from_s },
+    { "UUID",          NULL },
+    { "uuid",          NULL },
+    { "VARCHAR",       NULL },
+    { "VARCHAR(10)",   NULL },
+    { "VARCHAR(50)",   NULL },
+    { "VARCHAR(100)",  NULL },
+    { "VARCHAR(255)",  NULL },
+    { "INTEGER[]",     bson_append_int32_array_from_s },
+    { "POINT",         bson_append_point_from_s }
+};
+
+typedef struct {
+    const char *column_name;
+    bool (*bson_append_from_s) (bson_t *bson, const char *key, const char *value);
+} column_map_t;
+
+int
+get_column_map (bson_t            *bson_schema,
+                const char        *table_name,
+                column_map_t      **column_map,
+                int               *column_map_size)
+{
+    bson_iter_t iter_col, iter_dup;
+    int size;
+    column_map_t *column_map_p;
+    const char *data_type;
+    data_type_map_t *data_type_map_p;
+
+    bson_find_create_table (bson_schema, table_name, &iter_col) || DIE;
+    for (iter_dup = iter_col, size = 0; bson_iter_next (&iter_dup); size++)
+        ;
+    *column_map = calloc (sizeof (column_map_t), size);
+    *column_map_size = size;
+    column_map_p = *column_map;
+    while (bson_iter_next (&iter_col)) {
+        bson_iter_t iter_col_prop;
+
+        BSON_ITER_HOLDS_DOCUMENT (&iter_col) || DIE;
+        bson_iter_recurse (&iter_col, &iter_col_prop) || DIE;
+        bson_iter_find (&iter_col_prop, "column_name") || DIE;
+        BSON_ITER_HOLDS_UTF8 (&iter_col_prop) || DIE;
+        column_map_p->column_name = bson_iter_dup_utf8 (&iter_col_prop, NULL);
+        bson_iter_find (&iter_col_prop, "data_type") || DIE;
+        BSON_ITER_HOLDS_UTF8 (&iter_col_prop) || DIE;
+        data_type = bson_iter_utf8 (&iter_col_prop, NULL);
+        for (data_type_map_p = data_type_map;
+             data_type_map_p < (data_type_map + sizeof (data_type_map)) &&
+             strcmp (data_type_map_p->data_type, data_type) != 0;
+             data_type_map_p++)
+            ;
+        if (data_type_map < (data_type_map + sizeof (data_type_map)))
+            column_map_p->bson_append_from_s = data_type_map_p->bson_append_from_s ?
+                data_type_map_p->bson_append_from_s : bson_append_utf8_from_s;
+        else
+            DIE;
+        column_map_p++;
+    }
+    return true;
+}
+
+void
+load_table (mongoc_database_t *db,
+            const char        *table_name,
+            bson_t            *bson_schema)
+{
+    column_map_t *column_map, *column_map_p;
+    int column_map_size, i;
+    FILE *fp;
+    char *token;
+    bson_t bson;
+
+    printf ("load_table table_name: \"%s\"\n", table_name);
+    get_column_map (bson_schema, table_name, &column_map, &column_map_size) || DIE;
+    snprintf (mbdump_file, MAXPATHLEN, "%s/%s", mbdump_dir, table_name);
+    printf ("mbdump_file: \"%s\"\n", mbdump_file);
+    fp = fopen (mbdump_file, "r");
+    if (!fp) DIE;
+    fgets (buf, BUFSIZ, fp);
+    fputs (buf, stdout);
+    chomp (buf);
+    bson_init (&bson);
+    {
+        for (i = 0, column_map_p = column_map, token = strtok(buf, "\t");
+             i < column_map_size;
+             i++, column_map_p++, token = strtok(NULL, "\t")) {
+             bool ret;
+
+             ret = (*column_map_p->bson_append_from_s) (&bson, column_map_p->column_name, token);
+             ret || printf ("WARNING: column_map_p->bson_append_from_s failed column \"%s\": \"%s\"\n", column_map_p->column_name, token);
+             /*
+             printf ("%s: \"%s\"\n", column_map_p->column_name, token);
+             */
+        }
+        bson_printf ("bson: %s\n", &bson);
+        bson_reinit (&bson);
+    }
+    bson_destroy (&bson);
+    fclose (fp);
 }
 
 int64_t
@@ -174,6 +383,7 @@ execute (int   argc,
 
     bson_t bson_schema;
     bson_error_t error;
+    int argi;
 
     uristr = getenv ("MONGODB_URI");
     uri = mongoc_uri_new (uristr);
@@ -183,7 +393,10 @@ execute (int   argc,
 
     set_paths (argv);
     bson_init_from_json_file (&bson_schema, schema_file) || WARN_ERROR;
-    bson_printf ("bson_schema: %s\n", &bson_schema);
+    for (argi = 0; argi < argc; argi++) {
+        /* printf ("argv[%d]: \"%s\"\n", argi, argv[argi]); */
+        load_table (db, argv[argi], &bson_schema);
+    }
     bson_destroy (&bson_schema);
 
     mongoc_database_destroy (db);
@@ -218,8 +431,6 @@ int
 main (int   argc,
       char *argv[])
 {
-   char **argvp;
-   char *parent_name;
    double start_time;
    int64_t count;
    double end_time;
@@ -231,11 +442,8 @@ main (int   argc,
    mongoc_init ();
    mongoc_log_set_handler (log_local_handler, NULL);
 
-   argvp = argv;
-   parent_name = *argv++;
-
    start_time = dtimeofday ();
-   count = execute (argc - 2, argvp);
+   count = execute (argc - 1, &argv[1]);
    end_time = dtimeofday ();
    delta_time = end_time - start_time + 0.0000001;
    fprintf (stderr, "info: real: %.2f, count: %"PRId64", %"PRId64" docs/sec\n", delta_time, count, (int64_t)round (count/delta_time));
