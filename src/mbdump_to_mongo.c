@@ -35,11 +35,11 @@
 #define WARN_ERROR \
     (MONGOC_WARNING ("%s\n", error.message), true);
 #define DIE \
-    ((void)printf ("%s:%u: failed execution\n", __FILE__, __LINE__), abort (), false)
+    ((void)fprintf (stderr, "%s:%u: failed execution\n", __FILE__, __LINE__), abort (), false)
 #define EX(e) \
     ((void) ((e) ? 0 : __ex (#e, __FILE__, __LINE__)))
 #define __ex(e, file, line) \
-    ((void)printf ("%s:%u: failed execution `%s'\n", file, line, e), abort ())
+    ((void)fprintf (stderr, "%s:%u: failed execution `%s'\n", file, line, e), abort ())
 #define ASSERT(e) \
     assert (e)
 
@@ -55,6 +55,15 @@ char mbdump_file[MAXPATHLEN];
 #define MONGODB_DEFAULT_URI "mongodb://localhost/musicbrainz"
 
 char buf[BUFSIZ];
+
+double
+dtimeofday ()
+{
+   struct timeval tv;
+
+   bson_gettimeofday (&tv, NULL);
+   return tv.tv_sec + 0.000001 * tv.tv_usec;
+}
 
 char *
 realpath_replace (char *file_name)
@@ -212,7 +221,7 @@ bson_append_int32_from_s (bson_t     *bson,
 }
 
 bool
-bson_append_double_from_s (bson_t     *bson,
+bson_append_double_from_s (bson_t    *bson,
                           const char *key,
                           const char *value)
 {
@@ -224,7 +233,7 @@ bson_append_double_from_s (bson_t     *bson,
 }
 
 bool
-bson_append_bool_from_s (bson_t     *bson,
+bson_append_bool_from_s (bson_t      *bson,
                           const char *key,
                           const char *value)
 {
@@ -253,15 +262,15 @@ pg_timestamp_with_time_zone_from_s (const char     *s,
     sscanf (p, FORMAT_PG_TIMESTAMP_USEC, &timeval->tv_usec);
     p = strptime (p + 7, FORMAT_PG_TIMESTAMP_Z, &tm);
     if (p)
-       printf ("WARNING: strptime parsing incomplete\n");
+       fprintf (stderr, "WARNING: strptime parsing incomplete\n");
     timeval->tv_sec = timegm (&tm);
     return p == NULL;
 }
 
 bool
 bson_append_timeval_from_s (bson_t     *bson,
-                                        const char *key,
-                                        const char *value)
+                            const char *key,
+                            const char *value)
 {
     struct timeval timeval;
     bool ret = true;
@@ -360,10 +369,10 @@ typedef struct {
 } column_map_t;
 
 int
-get_column_map (bson_t            *bson_schema,
-                const char        *table_name,
-                column_map_t      **column_map,
-                int               *column_map_size)
+get_column_map (bson_t        *bson_schema,
+                const char    *table_name,
+                column_map_t **column_map,
+                int           *column_map_size)
 {
     bson_iter_t iter_col, iter_dup;
     int size;
@@ -429,21 +438,30 @@ load_table (mongoc_database_t *db,
             const char        *table_name,
             bson_t            *bson_schema)
 {
+    int64_t ret = true;
     column_map_t *column_map, *column_map_p;
     int column_map_size, i;
+    double start_time, end_time, delta_time;
     FILE *fp;
+    mongoc_collection_t *collection;
+    mongoc_bulk_operation_t *bulk;
+    size_t n_docs = 0;
     char *token;
-    bson_t bson;
+    bson_t bson, reply;
     int64_t count = 0;
+    bson_error_t error;
 
-    printf ("load_table table_name: \"%s\"\n", table_name);
+    fprintf (stderr, "load_table table_name: \"%s\"\n", table_name);
     get_column_map (bson_schema, table_name, &column_map, &column_map_size) || DIE;
     snprintf (mbdump_file, MAXPATHLEN, "%s/%s", mbdump_dir, table_name);
-    printf ("mbdump_file: \"%s\"\n", mbdump_file);
+    fprintf (stderr, "mbdump_file: \"%s\"\n", mbdump_file);
+    start_time = dtimeofday ();
     fp = fopen (mbdump_file, "r");
     if (!fp) DIE;
+    collection = mongoc_database_get_collection (db, table_name);
+    bulk = mongoc_collection_create_bulk_operation (collection, true, NULL);
     bson_init (&bson);
-    while (fgets (buf, BUFSIZ, fp)) {
+    while (ret && fgets (buf, BUFSIZ, fp)) {
         /*
         fputs (buf, stdout);
         */
@@ -453,23 +471,46 @@ load_table (mongoc_database_t *db,
              i++, column_map_p++, token = strtok_single (NULL, "\t")) {
              bool ret;
              /*
-             printf ("%s: \"%s\" [%d/%d](%s)\n", column_map_p->column_name, token, i, column_map_size, column_map_p->data_type);
+             fprintf (stderr, "%s: \"%s\" [%d/%d](%s)\n", column_map_p->column_name, token, i, column_map_size, column_map_p->data_type);
              fflush (stdout);
              */
              ret = (*column_map_p->bson_append_from_s) (&bson, column_map_p->column_name, token);
-             ret || printf ("WARNING: column_map_p->bson_append_from_s failed column %s: \"%s\" [%d/%d](%s)\n",
+             ret || fprintf (stderr, "WARNING: column_map_p->bson_append_from_s failed column %s: \"%s\" [%d/%d](%s)\n",
                             column_map_p->column_name, token, i, column_map_size, column_map_p->data_type);
         }
         /*
         bson_printf ("bson: %s\n", &bson);
         */
+        mongoc_bulk_operation_insert (bulk, &bson);
         bson_reinit (&bson);
-        count++;
+        if (++n_docs == BULK_OPS_SIZE) {
+           ret = mongoc_bulk_operation_execute (bulk, &reply, &error);
+           if (ret)
+              count += n_docs;
+           else
+              fprintf (stderr, "mongoc_cursor_bulk_insert execute failure: %s\n", error.message);
+           n_docs = 0;
+           mongoc_bulk_operation_destroy (bulk);
+           bulk = mongoc_collection_create_bulk_operation (collection, true, NULL);
+        }
+    }
+    if (ret && n_docs > 0) {
+       ret = mongoc_bulk_operation_execute (bulk, &reply, &error);
+       if (ret)
+          count += n_docs;
+       else
+          fprintf (stderr, "mongoc_cursor_bulk_insert execute failure: %s\n", error.message);
     }
     bson_destroy (&bson);
+    mongoc_bulk_operation_destroy (bulk);
+    mongoc_collection_destroy (collection);
     fclose (fp);
+    end_time = dtimeofday ();
+    delta_time = end_time - start_time + 0.0000001;
+    fprintf (stderr, "info: real: %.2f, count: %"PRId64", %"PRId64" docs/sec\n", delta_time, count, (int64_t)round (count/delta_time));
+    fflush (stderr);
     free (column_map);
-    return count;
+    return ret ? count : -1;
 }
 
 int64_t
@@ -496,7 +537,7 @@ execute (int   argc,
     set_paths (argv);
     bson_init_from_json_file (&bson_schema, schema_file) || WARN_ERROR;
     for (argi = 0; argi < argc; argi++) {
-        /* printf ("argv[%d]: \"%s\"\n", argi, argv[argi]); */
+        /* fprintf (stderr, "argv[%d]: \"%s\"\n", argi, argv[argi]); */
         count += load_table (db, argv[argi], &bson_schema);
     }
     bson_destroy (&bson_schema);
@@ -522,7 +563,7 @@ test_pg_timestamp_with_time_zone_from_s (void)
     strftime (stime_f_t, 64, FORMAT_PG_TIMESTAMP_F_T, tm);
     sprintf (stime_usec_z, "%s.%06ld+00", stime_f_t, (long)timeval.tv_usec);
     if (strcmp (s, stime_usec_z) != 0) {
-        printf ("Test pg_timestamp_with_time_zone_from_s failed, TIMESTAMP: \"%s\", sec:%ld, usec:%ld, strftime: \"%s\"\n",
+        fprintf (stderr, "Test pg_timestamp_with_time_zone_from_s failed, TIMESTAMP: \"%s\", sec:%ld, usec:%ld, strftime: \"%s\"\n",
                 s, timeval.tv_sec, (long)timeval.tv_usec, stime_usec_z);
         return false;
     }
@@ -541,7 +582,7 @@ test_bson_append_int32_array_from_s (void)
     bson_append_int32_array_from_s (&bson, "track_offset", input);
     actual = bson_as_json (&bson, NULL);
     if (strcmp (expected, actual) != 0) {
-        printf ("Test test_bson_append_int32_array_from_s failed, input: \"%s\", bson expected: \"%s\", bson actual: \"%s\"\n",
+        fprintf (stderr, "Test test_bson_append_int32_array_from_s failed, input: \"%s\", bson expected: \"%s\", bson actual: \"%s\"\n",
                 input, expected, actual);
         return false;
     }
@@ -561,7 +602,7 @@ test_bson_append_point_from_s (void)
     bson_append_point_from_s (&bson, "point", input);
     actual = bson_as_json (&bson, NULL);
     if (strcmp (expected, actual) != 0) {
-        printf ("Test test_bson_append_point_from_s failed, input: \"%s\", bson expected: \"%s\", bson actual: \"%s\"\n",
+        fprintf (stderr, "Test test_bson_append_point_from_s failed, input: \"%s\", bson expected: \"%s\", bson actual: \"%s\"\n",
                 input, expected, actual);
         return false;
     }
@@ -578,35 +619,24 @@ test_suite (void)
 }
 
 void
-log_local_handler (mongoc_log_level_t  log_level,
-                   const char         *log_domain,
-                   const char         *message,
-                   void               *user_data)
+log_local_handler (mongoc_log_level_t log_level,
+                   const char        *log_domain,
+                   const char        *message,
+                   void              *user_data)
 {
    /*
-   printf ("log_local_handler MONGOC_LOG_LEVEL_INFO:%d log_level:%d\n", MONGOC_LOG_LEVEL_INFO, log_level);
+   fprintf (stderr, "log_local_handler MONGOC_LOG_LEVEL_INFO:%d log_level:%d\n", MONGOC_LOG_LEVEL_INFO, log_level);
    */
    if (log_level <= MONGOC_LOG_LEVEL_INFO)
       mongoc_log_default_handler (log_level, log_domain, message, user_data);
-}
-
-double
-dtimeofday ()
-{
-   struct timeval tv;
-
-   bson_gettimeofday (&tv, NULL);
-   return tv.tv_sec + 0.000001 * tv.tv_usec;
 }
 
 int
 main (int   argc,
       char *argv[])
 {
-   double start_time;
+   double start_time, end_time, delta_time;
    int64_t count;
-   double end_time;
-   double delta_time;
 
    if (argc < 2) {
       DIE; /* pending - usage */
@@ -621,6 +651,7 @@ main (int   argc,
    count = execute (argc - 1, &argv[1]);
    end_time = dtimeofday ();
    delta_time = end_time - start_time + 0.0000001;
+   fprintf (stderr, "total:\n");
    fprintf (stderr, "info: real: %.2f, count: %"PRId64", %"PRId64" docs/sec\n", delta_time, count, (int64_t)round (count/delta_time));
 
    mongoc_cleanup ();
