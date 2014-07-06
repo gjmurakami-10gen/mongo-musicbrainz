@@ -34,6 +34,7 @@ DB_TIME_ID = ENV['DB_TIME_ID'] || file_to_s(CURRENT_FILE) || LATEST
 FTP_LATEST_DIR = "#{FTP_FULLEXPORT_DIR}/#{LATEST}"
 FULLEXPORT_LATEST_DIR = "data/fullexport/#{LATEST}"
 DUMP_LATEST_DIR = "data/dump/#{LATEST}"
+MBDUMP_DIR = "data/fullexport/#{file_to_s(LATEST_FILE)}/mbdump"
 
 MONGO_DBPATH = "data/db/#{DB_TIME_ID}"
 MONGOD_PORT = 37017
@@ -43,8 +44,10 @@ MONGO_DBNAME = "musicbrainz"
 MONGODB_URI = "mongodb://localhost:#{MONGOD_PORT}/#{MONGO_DBNAME}"
 ENV['MONGODB_URI'] = MONGODB_URI
 
+SCHEMA_FILE = 'schema/create_tables.json'
 MERGE_SPEC = 'schema/merge_spec_flat.json'
-MONGOMERGE = 'src/mongomerge' #'script/merge_agg.rb' #
+MBDUMP_TO_MONGO = './src/mbdump_to_mongo' #'./script/mbdump_to_mongo.rb' #
+MONGOMERGE = './src/mongomerge' #'./script/merge_agg.rb' #
 
 RSpec::Core::RakeTask.new(:spec)
 
@@ -202,15 +205,15 @@ $CreateTables_sql = 'schema/CreateTables.sql' # override - no sub-project yet fo
 # PK - Primary Key index hint
 # references table.column - relation in comment
 
-file 'schema/create_tables.json' => [ $CreateTables_sql, 'lib/parslet_sql.rb' ] do |file|
+file SCHEMA_FILE => [ $CreateTables_sql, 'lib/parslet_sql.rb' ] do |file|
   sql_text = IO.read($CreateTables_sql)
   m = CreateTablesParser.new.parse(sql_text)
   File.open(file.name, 'w') {|fio| fio.write(JSON.pretty_generate(m)) }
 end
 
 desc "print references from schema"
-task :references => 'schema/create_tables.json' do
-  JSON.parse(IO.read('schema/create_tables.json')).each do |sql|
+task :references => SCHEMA_FILE do
+  JSON.parse(IO.read(SCHEMA_FILE)).each do |sql|
     if sql.has_key?('create_table')
       create_table = sql['create_table']
       table_name = create_table['table_name']
@@ -229,16 +232,16 @@ task :references => 'schema/create_tables.json' do
 end
 
 desc "load_tables"
-task :load_tables => 'schema/create_tables.json' do
+task :load_tables => SCHEMA_FILE do
   table_names = Dir["data/fullexport/#{DB_TIME_ID}/mbdump/*"].collect{|file_name| File.basename(file_name) }
-  sh "MONGODB_URI='#{MONGODB_URI}' time ./script/mbdump_to_mongo.rb #{table_names.join(' ')}"
+  sh "MONGODB_URI='#{MONGODB_URI}' #{MBDUMP_TO_MONGO} #{SCHEMA_FILE} #{MBDUMP_DIR} #{table_names.join(' ')}"
 end
 
 desc "print indexes from schema - does not ensure indexes yet"
-task :indexes => 'schema/create_tables.json' do
+task :indexes => SCHEMA_FILE do
   #client = Mongo::MongoClient.from_uri(MONGODB_URI)
   #db = client.db
-  JSON.parse(IO.read('schema/create_tables.json')).each do |sql|
+  JSON.parse(IO.read(SCHEMA_FILE)).each do |sql|
     if sql.has_key?('create_table')
       create_table = sql['create_table']
       table_name = create_table['table_name']
@@ -260,8 +263,8 @@ task :indexes => 'schema/create_tables.json' do
 end
 
 desc "merge_enums" # running this shows that enums from the schema are not used
-task :merge_enums => 'schema/create_tables.json' do
-  sh "MONGODB_URI='#{MONGODB_URI}' time ./script/merge_enum_types.rb"
+task :merge_enums => SCHEMA_FILE do
+  sh "MONGODB_URI='#{MONGODB_URI}' ./script/merge_enum_types.rb"
 end
 
 task :merge_data_check do

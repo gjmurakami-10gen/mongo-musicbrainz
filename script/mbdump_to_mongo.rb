@@ -37,14 +37,7 @@ def file_to_s(file)
   IO.read(file).chomp
 end
 
-BASE_DIR = File.expand_path('../..', __FILE__)
-FULLEXPORT_DIR = "#{BASE_DIR}/ftp.musicbrainz.org/pub/musicbrainz/data/fullexport"
-LATEST_FILE = "#{FULLEXPORT_DIR}/LATEST"
-MBDUMP_DIR = "#{BASE_DIR}/data/fullexport/#{file_to_s(LATEST_FILE)}/mbdump"
-SCHEMA_FILE = "#{BASE_DIR}/schema/create_tables.json"
 MONGO_DBNAME = "musicbrainz"
-
-$create_tables = JSON.parse(IO.read(SCHEMA_FILE))
 
 $transform = {
     'BOOLEAN' => Proc.new {|s| if s == 't'; true; elsif s == 'f'; false; else raise 'BOOLEAN'; end },
@@ -93,7 +86,7 @@ def load_table(db, name, options)
   columns = get_columns(name)
   columns = merge_transforms(columns)
   columns = columns.collect{|column| [column['column_name'], column['transform']]}
-  file_name = "#{MBDUMP_DIR}/#{name}"
+  file_name = "#{$mbdump_dir}/#{name}"
   slice_size = options[:profile] ? 10_000 : 100_000
   count = 0
   real = 0.0
@@ -128,14 +121,18 @@ def load_table(db, name, options)
 end
 
 if $0 == __FILE__
-  banner = "usage: #{$0} [options] table_names"
+  banner = "usage: #{$0} [options] schema_file mbdump_dir table_names"
 
   options = Trollop::options do
     banner banner
     opt :profile, "Profile", :short => 'p', :default => false
   end
 
-  abort banner if ARGV.size < 1
+  abort banner if ARGV.size < 2
+
+  schema_file = ARGV.shift
+  $mbdump_dir = ARGV.shift
+  $create_tables = JSON.parse(IO.read(schema_file))
 
   client = Mongo::MongoClient.from_uri
   db = client[MONGO_DBNAME]

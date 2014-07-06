@@ -2,16 +2,19 @@ CMDS = mbdump_to_mongo mongomerge
 TESTS = test-aggregate test-cursor test-mongoload test-mongomerge
 
 WARNINGS = -std=c89 -Wall -Wno-deprecated-declarations -Wno-format-extra-args -Wdeclaration-after-statement
-DEBUG = -ggdb
+DEBUG = -g
 OPTIMIZE = -O2 -mtune=native
 
-CFLAGS = $(shell pkg-config --cflags libmongoc-1.0) $(WARNINGS)
+CFLAGS = $(shell pkg-config --cflags libmongoc-1.0) $(DEBUG) $(WARNINGS)
 LIBS = $(shell pkg-config --libs libmongoc-1.0) -lm
+
+SCHEMA_FILE = ../../mongo-musicbrainz/schema/create_tables.json
+MBDUMP_DIR = ../../mongo-musicbrainz/data/fullexport/20140604-002730/mbdump
 
 default: test
 
 test: all
-	MONGODB_URI='mongodb://localhost/test' $$VALGRIND ./mbdump_to_mongo area
+	MONGODB_URI='mongodb://localhost/test' $$VALGRIND ./mbdump_to_mongo $(SCHEMA_FILE) $(MBDUMP_DIR) area
 
 all: $(CMDS) $(TESTS)
 

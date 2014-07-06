@@ -28,7 +28,7 @@
 
 #define INSERT_BATCH_SIZE 1000
 #define BULK_OPS_SIZE 1000
-#define PROGRESS_SIZE (1000*BULK_OPS_SIZE)
+#define PROGRESS_SIZE (100*BULK_OPS_SIZE)
 #define PROGRESS_SIZE_FORMAT "M"
 #define PROGRESS_END_FORMAT ">%zd=%"PRId64
 
@@ -43,11 +43,6 @@
 #define ASSERT(e) \
     assert (e)
 
-char cwd[MAXPATHLEN];
-char base_dir[MAXPATHLEN];
-char fullexport_dir[MAXPATHLEN];
-char latest_file[MAXPATHLEN];
-char latest_name[MAXPATHLEN];
 char mbdump_dir[MAXPATHLEN];
 char schema_file[MAXPATHLEN];
 char mbdump_file[MAXPATHLEN];
@@ -61,7 +56,7 @@ dtimeofday ()
 {
    struct timeval tv;
 
-   bson_gettimeofday (&tv, NULL);
+   bson_gettimeofday (&tv);
    return tv.tv_sec + 0.000001 * tv.tv_usec;
 }
 
@@ -149,23 +144,6 @@ bson_init_from_json_file (bson_t     *bson,
     free (json);
     free (json_wrapped);
     return ret;
-}
-
-void
-set_paths (char *argv[])
-{
-    char *latest_name;
-
-    getcwd (cwd, MAXPATHLEN);
-    snprintf (base_dir, MAXPATHLEN, "%s/%s", cwd, dirname (argv[0]));
-    dirname_replace (base_dir);
-    realpath_replace (base_dir);
-    snprintf (fullexport_dir, MAXPATHLEN, "%s/%s", base_dir, "ftp.musicbrainz.org/pub/musicbrainz/data/fullexport");
-    snprintf (latest_file, MAXPATHLEN, "%s/%s", fullexport_dir, "LATEST");
-    latest_name = chomp (file_to_s (latest_file));
-    snprintf (mbdump_dir, MAXPATHLEN, "%s/data/fullexport/%s/mbdump", base_dir, latest_name);
-    free (latest_name);
-    snprintf (schema_file, MAXPATHLEN, "%s/schema/create_tables.json", base_dir);
 }
 
 bool
@@ -454,7 +432,7 @@ load_table (mongoc_database_t *db,
     fprintf (stderr, "load_table table_name: \"%s\"\n", table_name);
     get_column_map (bson_schema, table_name, &column_map, &column_map_size) || DIE;
     snprintf (mbdump_file, MAXPATHLEN, "%s/%s", mbdump_dir, table_name);
-    fprintf (stderr, "mbdump_file: \"%s\"\n", mbdump_file);
+    /* fprintf (stderr, "mbdump_file: \"%s\"\n", mbdump_file); */
     start_time = dtimeofday ();
     fp = fopen (mbdump_file, "r");
     if (!fp) DIE;
@@ -485,8 +463,13 @@ load_table (mongoc_database_t *db,
         bson_reinit (&bson);
         if (++n_docs == BULK_OPS_SIZE) {
            ret = mongoc_bulk_operation_execute (bulk, &reply, &error);
-           if (ret)
+           if (ret) {
               count += n_docs;
+              if (count % PROGRESS_SIZE == 0) {
+                  fputc('.', stdout);
+                  fflush(stdout);
+              }
+           }
            else
               fprintf (stderr, "mongoc_cursor_bulk_insert execute failure: %s\n", error.message);
            n_docs = 0;
@@ -501,6 +484,9 @@ load_table (mongoc_database_t *db,
        else
           fprintf (stderr, "mongoc_cursor_bulk_insert execute failure: %s\n", error.message);
     }
+    fputc('.', stdout);
+    fputc('\n', stdout);
+    fflush(stdout);
     bson_destroy (&bson);
     mongoc_bulk_operation_destroy (bulk);
     mongoc_collection_destroy (collection);
@@ -534,10 +520,9 @@ execute (int   argc,
     database_name = mongoc_uri_get_database (uri);
     db = mongoc_client_get_database (client, database_name);
 
-    set_paths (argv);
     bson_init_from_json_file (&bson_schema, schema_file) || WARN_ERROR;
     for (argi = 0; argi < argc; argi++) {
-        /* fprintf (stderr, "argv[%d]: \"%s\"\n", argi, argv[argi]); */
+        fprintf (stderr, "[%d/%d] %s\n", argi + 1, argc, argv[argi]);
         count += load_table (db, argv[argi], &bson_schema);
     }
     bson_destroy (&bson_schema);
@@ -638,9 +623,15 @@ main (int   argc,
    double start_time, end_time, delta_time;
    int64_t count;
 
-   if (argc < 2) {
-      DIE; /* pending - usage */
+   if (argc < 3) {
+      fprintf(stderr, "usage: %s [options] schema_file mbdump_dir table_names", argv[0]);
+      DIE;
    }
+   argc--, argv++;
+   strcpy(schema_file, argv[0]);
+   argc--, argv++;
+   strcpy(mbdump_dir, argv[0]);
+   argc--, argv++;
 
    test_suite ();
 
@@ -648,7 +639,7 @@ main (int   argc,
    mongoc_log_set_handler (log_local_handler, NULL);
 
    start_time = dtimeofday ();
-   count = execute (argc - 1, &argv[1]);
+   count = execute (argc, &argv[0]);
    end_time = dtimeofday ();
    delta_time = end_time - start_time + 0.0000001;
    fprintf (stderr, "total:\n");

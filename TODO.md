@@ -1,8 +1,9 @@
 # TO DO
 
 * mbdump_to_mongo - C language version
-  * pending - pson_append_date_time_from_s
+  * pending - bson_append_date_time_from_s
   * fix memory leaks
+  * ulimit -c unlimited
 * mongomerge - C language version
   * skip merge_one_all if no one merges
   * size_t n_docs printf format

@@ -27,7 +27,7 @@ double
 dtimeofday ()
 {
    struct timeval tv;
-   bson_gettimeofday (&tv, NULL);
+   bson_gettimeofday (&tv);
    return tv.tv_sec + 0.000001 * tv.tv_usec;
 }
 
